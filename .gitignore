@@ -8,5 +8,14 @@ wheels/
 
 # Virtual environments
 .venv
-
 .env
+
+# IDE settings
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# uv cache
+.uv
