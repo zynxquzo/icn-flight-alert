@@ -1,0 +1,1325 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dineug/erd-editor/main/json-schema/schema.json",
+  "version": "3.0.0",
+  "settings": {
+    "width": 2000,
+    "height": 2000,
+    "scrollTop": -255.678,
+    "scrollLeft": -780.8379,
+    "zoomLevel": 0.73,
+    "show": 431,
+    "database": 4,
+    "databaseName": "",
+    "canvasType": "ERD",
+    "language": 1,
+    "tableNameCase": 4,
+    "columnNameCase": 2,
+    "bracketType": 1,
+    "relationshipDataTypeSync": true,
+    "relationshipOptimization": false,
+    "columnOrder": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "maxWidthComment": -1,
+    "ignoreSaveSettings": 0
+  },
+  "doc": {
+    "tableIds": [
+      "-kKLpwRawj5Ld9pc89wX3",
+      "4LPBJismP7BLnwTpDRKCY",
+      "C8S5uNKtXaxV0YaqV2tT-"
+    ],
+    "relationshipIds": [
+      "bS1Mjp7N_tPQDW6yT5zwY",
+      "HfAB0cXQaXJZmbulc_xPV"
+    ],
+    "indexIds": [],
+    "memoIds": []
+  },
+  "collections": {
+    "tableEntities": {
+      "-kKLpwRawj5Ld9pc89wX3": {
+        "id": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "FLIGHTS",
+        "comment": "",
+        "columnIds": [
+          "linmGl6M-QSozkPmDVUSQ",
+          "4zoPMjwwRelM2xWqmoyHj",
+          "5o20pTZLO3yQpbf8M9Qe-",
+          "r3ENoZ7TDpoUGjKNfsged",
+          "ckCcFv1weqC7CCIRw37Wo",
+          "4rrqXtT9fyoH4RKHTbwWQ",
+          "kvO9OogW4X-znis8CzgnF",
+          "zPCJEtguN88KxzA4GBSml",
+          "yxnpKPubs0ng8tm1y9VFf",
+          "IO3EcSDD6pW_NzUM3bwfW",
+          "UrHco1OhOlPnet0ENI5Ap",
+          "Hlqnwdjt4vn7c8gzgGjJX",
+          "FscirPcz6Anr5RpJf-tNC",
+          "KXGp8oz5ceZ9p5fndEe_D",
+          "YGfPYIrux8JltvHbuD0su",
+          "FwfDb662nSsby6aRWWKvv",
+          "8I5U1sajcUSsHYZhKrD0K",
+          "8qW32up5dEuTiHb9Dtmm4",
+          "2xbXVUsL754oZkS72Mx0R"
+        ],
+        "seqColumnIds": [
+          "linmGl6M-QSozkPmDVUSQ",
+          "HPS5cRQcUIjIGV1pTR37O",
+          "xV4Dg5X4OICtDxr9mR5tP",
+          "4zoPMjwwRelM2xWqmoyHj",
+          "U1BesYpSm--i14hh4WwsE",
+          "5o20pTZLO3yQpbf8M9Qe-",
+          "r3ENoZ7TDpoUGjKNfsged",
+          "ckCcFv1weqC7CCIRw37Wo",
+          "4rrqXtT9fyoH4RKHTbwWQ",
+          "kvO9OogW4X-znis8CzgnF",
+          "zPCJEtguN88KxzA4GBSml",
+          "yxnpKPubs0ng8tm1y9VFf",
+          "IO3EcSDD6pW_NzUM3bwfW",
+          "UrHco1OhOlPnet0ENI5Ap",
+          "Hlqnwdjt4vn7c8gzgGjJX",
+          "FscirPcz6Anr5RpJf-tNC",
+          "KXGp8oz5ceZ9p5fndEe_D",
+          "YGfPYIrux8JltvHbuD0su",
+          "FwfDb662nSsby6aRWWKvv",
+          "8I5U1sajcUSsHYZhKrD0K",
+          "8qW32up5dEuTiHb9Dtmm4",
+          "2xbXVUsL754oZkS72Mx0R"
+        ],
+        "ui": {
+          "x": 654.3837,
+          "y": 60.2464,
+          "zIndex": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1772889690320,
+          "createAt": 1772882394150
+        }
+      },
+      "KahLtYB3YSCJWHHPiXIan": {
+        "id": "KahLtYB3YSCJWHHPiXIan",
+        "name": "USERS",
+        "comment": "",
+        "columnIds": [
+          "lr8hja4YORba7J8AkBHyd",
+          "8oo8u7kXWrtYhxQxKB2ok"
+        ],
+        "seqColumnIds": [
+          "lr8hja4YORba7J8AkBHyd",
+          "8oo8u7kXWrtYhxQxKB2ok"
+        ],
+        "ui": {
+          "x": 258,
+          "y": 36,
+          "zIndex": 55,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1772882778032,
+          "createAt": 1772882719120
+        }
+      },
+      "4LPBJismP7BLnwTpDRKCY": {
+        "id": "4LPBJismP7BLnwTpDRKCY",
+        "name": "FLIGHT_STATUS_LOGS",
+        "comment": "",
+        "columnIds": [
+          "PiUJtEAqls2kt9cV0FvL7",
+          "WXQDTqT-8Te1uiFbqFk-b",
+          "S5JpVc0VugWkbgfWdmk69",
+          "cLPKHzubTYpbuywHIkfpV",
+          "Z6PkJbucTkiyIPszjBN8j",
+          "eFqfQmi-xXZiSCNMr1yPr",
+          "O-1gwnQkntrHa190K52Gn",
+          "nE9qng45GCThBR6qlIBCQ",
+          "khgMvAx4TbXMA3IAtpCP_",
+          "fnNdyY06t04nPyEmIgipC",
+          "fzXz13iOIuUnbYWRkz-Z5"
+        ],
+        "seqColumnIds": [
+          "PiUJtEAqls2kt9cV0FvL7",
+          "WXQDTqT-8Te1uiFbqFk-b",
+          "S5JpVc0VugWkbgfWdmk69",
+          "cLPKHzubTYpbuywHIkfpV",
+          "Z6PkJbucTkiyIPszjBN8j",
+          "eFqfQmi-xXZiSCNMr1yPr",
+          "O-1gwnQkntrHa190K52Gn",
+          "nE9qng45GCThBR6qlIBCQ",
+          "khgMvAx4TbXMA3IAtpCP_",
+          "fnNdyY06t04nPyEmIgipC",
+          "fzXz13iOIuUnbYWRkz-Z5",
+          "vdHO2EzFxK2APH2oWstVm"
+        ],
+        "ui": {
+          "x": 1162.726,
+          "y": 626.8629,
+          "zIndex": 267,
+          "widthName": 118,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1772889701246,
+          "createAt": 1772886513381
+        }
+      },
+      "C8S5uNKtXaxV0YaqV2tT-": {
+        "id": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "NOTIFICATIIONS",
+        "comment": "",
+        "columnIds": [
+          "oZIINqcjoxDC1i3d_4mvg",
+          "tganA6M2xir_ML874-eLX",
+          "mAzSRngTAhDoO8URRoXtJ",
+          "gGmHCrpeQoD3TY_k8dBym",
+          "rmH2G25Lk0lQrBZhXWvB-",
+          "8IOzE4jJL22DAjgE4w3f-",
+          "zNoyMzJk-6YlaOEXZv36a",
+          "W5BqeBtRi70tOMxl7NbMb"
+        ],
+        "seqColumnIds": [
+          "oZIINqcjoxDC1i3d_4mvg",
+          "tganA6M2xir_ML874-eLX",
+          "mAzSRngTAhDoO8URRoXtJ",
+          "gGmHCrpeQoD3TY_k8dBym",
+          "rmH2G25Lk0lQrBZhXWvB-",
+          "8IOzE4jJL22DAjgE4w3f-",
+          "zNoyMzJk-6YlaOEXZv36a",
+          "W5BqeBtRi70tOMxl7NbMb"
+        ],
+        "ui": {
+          "x": 75.909,
+          "y": 624.1494,
+          "zIndex": 345,
+          "widthName": 89,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1772889694536,
+          "createAt": 1772886783463
+        }
+      },
+      "wVxArRoYVMGs9UeqKXbfg": {
+        "id": "wVxArRoYVMGs9UeqKXbfg",
+        "name": "USERS",
+        "comment": "",
+        "columnIds": [
+          "w9Tn69nONo9dK3IQbjARv",
+          "TgHHFEu1PLiy6fLyIrGsH",
+          "etL0BI5pltmO_DpJdRR49",
+          "Xlg6oM4SuBrkzkN7lfS55"
+        ],
+        "seqColumnIds": [
+          "w9Tn69nONo9dK3IQbjARv",
+          "TgHHFEu1PLiy6fLyIrGsH",
+          "etL0BI5pltmO_DpJdRR49",
+          "Xlg6oM4SuBrkzkN7lfS55"
+        ],
+        "ui": {
+          "x": 780.7234,
+          "y": 602.8464,
+          "zIndex": 438,
+          "widthName": 60,
+          "widthComment": 60,
+          "color": ""
+        },
+        "meta": {
+          "updateAt": 1772889371280,
+          "createAt": 1772887612008
+        }
+      }
+    },
+    "tableColumnEntities": {
+      "linmGl6M-QSozkPmDVUSQ": {
+        "id": "linmGl6M-QSozkPmDVUSQ",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "flight_pk ",
+        "comment": "",
+        "dataType": "BIGINT AUTO_INCREMENT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 143,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889156047,
+          "createAt": 1772882404136
+        }
+      },
+      "HPS5cRQcUIjIGV1pTR37O": {
+        "id": "HPS5cRQcUIjIGV1pTR37O",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "user_id",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772882488855,
+          "createAt": 1772882404794
+        }
+      },
+      "ckCcFv1weqC7CCIRw37Wo": {
+        "id": "ckCcFv1weqC7CCIRw37Wo",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "flight_type ",
+        "comment": "'departure' or 'arrival'",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 61,
+          "widthComment": 115,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886343989,
+          "createAt": 1772882406731
+        }
+      },
+      "r3ENoZ7TDpoUGjKNfsged": {
+        "id": "r3ENoZ7TDpoUGjKNfsged",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "flights_date",
+        "comment": "출발/도착 날짜",
+        "dataType": "DATE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 63,
+          "widthComment": 82,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886328125,
+          "createAt": 1772882406945
+        }
+      },
+      "4rrqXtT9fyoH4RKHTbwWQ": {
+        "id": "4rrqXtT9fyoH4RKHTbwWQ",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "airline ",
+        "comment": "\"대한항공\", \"비엣젯항공\" 등",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 150,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886353895,
+          "createAt": 1772882407152
+        }
+      },
+      "kvO9OogW4X-znis8CzgnF": {
+        "id": "kvO9OogW4X-znis8CzgnF",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "airport ",
+        "comment": "\"푸꾸옥\", \"타이베이\" 등",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 126,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886358128,
+          "createAt": 1772882407389
+        }
+      },
+      "zPCJEtguN88KxzA4GBSml": {
+        "id": "zPCJEtguN88KxzA4GBSml",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "airport_code ",
+        "comment": "\"PQC\", \"TPE\" 등",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 72,
+          "widthComment": 84,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886362293,
+          "createAt": 1772882407561
+        }
+      },
+      "yxnpKPubs0ng8tm1y9VFf": {
+        "id": "yxnpKPubs0ng8tm1y9VFf",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "terminal_id ",
+        "comment": "\"P01\", \"P02\", \"P03\" 등",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 116,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886366354,
+          "createAt": 1772882663980
+        }
+      },
+      "IO3EcSDD6pW_NzUM3bwfW": {
+        "id": "IO3EcSDD6pW_NzUM3bwfW",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "gate_number ",
+        "comment": "\"114\", \"109\" 등",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 75,
+          "widthComment": 81,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886371388,
+          "createAt": 1772882666181
+        }
+      },
+      "UrHco1OhOlPnet0ENI5Ap": {
+        "id": "UrHco1OhOlPnet0ENI5Ap",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "schedule_date_time ",
+        "comment": "\"202603040030\"",
+        "dataType": "VARCHAR(12)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 109,
+          "widthComment": 89,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886378080,
+          "createAt": 1772882671318
+        }
+      },
+      "Hlqnwdjt4vn7c8gzgGjJX": {
+        "id": "Hlqnwdjt4vn7c8gzgGjJX",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "estimated_date_time",
+        "comment": "\"202603040031\"",
+        "dataType": "VARCHAR(12)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 111,
+          "widthComment": 89,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886382924,
+          "createAt": 1772882672066
+        }
+      },
+      "lr8hja4YORba7J8AkBHyd": {
+        "id": "lr8hja4YORba7J8AkBHyd",
+        "tableId": "KahLtYB3YSCJWHHPiXIan",
+        "name": "user_id",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772882739389,
+          "createAt": 1772882729554
+        }
+      },
+      "8oo8u7kXWrtYhxQxKB2ok": {
+        "id": "8oo8u7kXWrtYhxQxKB2ok",
+        "tableId": "KahLtYB3YSCJWHHPiXIan",
+        "name": "email",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772882782084,
+          "createAt": 1772882731395
+        }
+      },
+      "xV4Dg5X4OICtDxr9mR5tP": {
+        "id": "xV4Dg5X4OICtDxr9mR5tP",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "user_id",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772882768543,
+          "createAt": 1772882768543
+        }
+      },
+      "5o20pTZLO3yQpbf8M9Qe-": {
+        "id": "5o20pTZLO3yQpbf8M9Qe-",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "flight_id ",
+        "comment": "예: \"KE123\", \"VJ974\"",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 108,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886337487,
+          "createAt": 1772886042240
+        }
+      },
+      "U1BesYpSm--i14hh4WwsE": {
+        "id": "U1BesYpSm--i14hh4WwsE",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "user_email ",
+        "comment": "",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 61,
+          "widthComment": 60,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886127834,
+          "createAt": 1772886115555
+        }
+      },
+      "FscirPcz6Anr5RpJf-tNC": {
+        "id": "FscirPcz6Anr5RpJf-tNC",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "remark ",
+        "comment": "\"도착\", \"출발\", \"결항\", \"지연\" 등",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 169,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886387530,
+          "createAt": 1772886275307
+        }
+      },
+      "KXGp8oz5ceZ9p5fndEe_D": {
+        "id": "KXGp8oz5ceZ9p5fndEe_D",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "chkin_range ",
+        "comment": "체크인카운터 (출발편만)",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 69,
+          "widthComment": 133,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886314318,
+          "createAt": 1772886275720
+        }
+      },
+      "YGfPYIrux8JltvHbuD0su": {
+        "id": "YGfPYIrux8JltvHbuD0su",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "carousel ",
+        "comment": "수하물수취대 (도착편만)",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 133,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886502739,
+          "createAt": 1772886276057
+        }
+      },
+      "FwfDb662nSsby6aRWWKvv": {
+        "id": "FwfDb662nSsby6aRWWKvv",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "exit_number ",
+        "comment": "출구번호 (도착편만)",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 70,
+          "widthComment": 109,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886488997,
+          "createAt": 1772886276374
+        }
+      },
+      "8I5U1sajcUSsHYZhKrD0K": {
+        "id": "8I5U1sajcUSsHYZhKrD0K",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "last_checked_at",
+        "comment": "마지막 API 조회 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 84,
+          "widthComment": 114,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886496868,
+          "createAt": 1772886276667
+        }
+      },
+      "8qW32up5dEuTiHb9Dtmm4": {
+        "id": "8qW32up5dEuTiHb9Dtmm4",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "created_at ",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886483032,
+          "createAt": 1772886276937
+        }
+      },
+      "2xbXVUsL754oZkS72Mx0R": {
+        "id": "2xbXVUsL754oZkS72Mx0R",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "is_active ",
+        "comment": "모니터링 활성화 여부",
+        "dataType": "BOOLEAN DEFAULT TRUE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 117,
+          "widthDataType": 136,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886461162,
+          "createAt": 1772886277172
+        }
+      },
+      "PiUJtEAqls2kt9cV0FvL7": {
+        "id": "PiUJtEAqls2kt9cV0FvL7",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "log_id ",
+        "comment": "",
+        "dataType": "BIGINT AUTO_INCREMENT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 143,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889137398,
+          "createAt": 1772886550049
+        }
+      },
+      "S5JpVc0VugWkbgfWdmk69": {
+        "id": "S5JpVc0VugWkbgfWdmk69",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "schedule_date_time ",
+        "comment": "",
+        "dataType": "VARCHAR(12)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 109,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889566821,
+          "createAt": 1772886550425
+        }
+      },
+      "cLPKHzubTYpbuywHIkfpV": {
+        "id": "cLPKHzubTYpbuywHIkfpV",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "estimated_date_time ",
+        "comment": "지연 감지용",
+        "dataType": "VARCHAR(12)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 115,
+          "widthComment": 65,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886743965,
+          "createAt": 1772886550855
+        }
+      },
+      "eFqfQmi-xXZiSCNMr1yPr": {
+        "id": "eFqfQmi-xXZiSCNMr1yPr",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "gate_number ",
+        "comment": "",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 75,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886694933,
+          "createAt": 1772886551228
+        }
+      },
+      "O-1gwnQkntrHa190K52Gn": {
+        "id": "O-1gwnQkntrHa190K52Gn",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "terminal_id ",
+        "comment": "",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886703151,
+          "createAt": 1772886551618
+        }
+      },
+      "nE9qng45GCThBR6qlIBCQ": {
+        "id": "nE9qng45GCThBR6qlIBCQ",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "remark",
+        "comment": "상태 변화",
+        "dataType": "VARCHAR(50)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886749618,
+          "createAt": 1772886552015
+        }
+      },
+      "khgMvAx4TbXMA3IAtpCP_": {
+        "id": "khgMvAx4TbXMA3IAtpCP_",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "carousel ",
+        "comment": "도착편",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886754866,
+          "createAt": 1772886552393
+        }
+      },
+      "fnNdyY06t04nPyEmIgipC": {
+        "id": "fnNdyY06t04nPyEmIgipC",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "change_type ",
+        "comment": "'gate_change', 'delay', 'status_change', 'terminal_change'",
+        "dataType": "VARCHAR(20)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 72,
+          "widthComment": 299,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886761576,
+          "createAt": 1772886552765
+        }
+      },
+      "fzXz13iOIuUnbYWRkz-Z5": {
+        "id": "fzXz13iOIuUnbYWRkz-Z5",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "detected_at",
+        "comment": "변경 감지 시각",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 81,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886770057,
+          "createAt": 1772886553175
+        }
+      },
+      "vdHO2EzFxK2APH2oWstVm": {
+        "id": "vdHO2EzFxK2APH2oWstVm",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "",
+        "comment": "",
+        "dataType": "",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772886554472,
+          "createAt": 1772886554472
+        }
+      },
+      "WXQDTqT-8Te1uiFbqFk-b": {
+        "id": "WXQDTqT-8Te1uiFbqFk-b",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "flight_pk ",
+        "comment": "",
+        "dataType": "BIGINT AUTO_INCREMENT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 143,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889159123,
+          "createAt": 1772886598659
+        }
+      },
+      "oZIINqcjoxDC1i3d_4mvg": {
+        "id": "oZIINqcjoxDC1i3d_4mvg",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "notification_id ",
+        "comment": "",
+        "dataType": "BIGINT AUTO_INCREMENT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 80,
+          "widthComment": 60,
+          "widthDataType": 143,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889148746,
+          "createAt": 1772886801714
+        }
+      },
+      "mAzSRngTAhDoO8URRoXtJ": {
+        "id": "mAzSRngTAhDoO8URRoXtJ",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "notification_type ",
+        "comment": "'delay', 'gate_change', 'cancel', 'terminal_change'",
+        "dataType": "ENUM",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 93,
+          "widthComment": 257,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889643856,
+          "createAt": 1772886806051
+        }
+      },
+      "gGmHCrpeQoD3TY_k8dBym": {
+        "id": "gGmHCrpeQoD3TY_k8dBym",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "message ",
+        "comment": "\"게이트가 109에서 114로 변경되었습니다\"",
+        "dataType": "TEXT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 228,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887192819,
+          "createAt": 1772886806609
+        }
+      },
+      "rmH2G25Lk0lQrBZhXWvB-": {
+        "id": "rmH2G25Lk0lQrBZhXWvB-",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "sent_to ",
+        "comment": "이메일 주소",
+        "dataType": "VARCHAR(255)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 65,
+          "widthDataType": 81,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887187105,
+          "createAt": 1772886807132
+        }
+      },
+      "8IOzE4jJL22DAjgE4w3f-": {
+        "id": "8IOzE4jJL22DAjgE4w3f-",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "sent_at ",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887167600,
+          "createAt": 1772886807590
+        }
+      },
+      "zNoyMzJk-6YlaOEXZv36a": {
+        "id": "zNoyMzJk-6YlaOEXZv36a",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "is_sent ",
+        "comment": "",
+        "dataType": "BOOLEAN DEFAULT FALSE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 139,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887172232,
+          "createAt": 1772886808069
+        }
+      },
+      "W5BqeBtRi70tOMxl7NbMb": {
+        "id": "W5BqeBtRi70tOMxl7NbMb",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "error_message ",
+        "comment": "전송 실패 시",
+        "dataType": "TEXT",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 82,
+          "widthComment": 69,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887177179,
+          "createAt": 1772886808439
+        }
+      },
+      "tganA6M2xir_ML874-eLX": {
+        "id": "tganA6M2xir_ML874-eLX",
+        "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+        "name": "flight_pk ",
+        "comment": "",
+        "dataType": "BIGINT AUTO_INCREMENT",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 2,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 143,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889162813,
+          "createAt": 1772886824084
+        }
+      },
+      "w9Tn69nONo9dK3IQbjARv": {
+        "id": "w9Tn69nONo9dK3IQbjARv",
+        "tableId": "wVxArRoYVMGs9UeqKXbfg",
+        "name": "user_id ",
+        "comment": "",
+        "dataType": "BIGINT AUTO_INCREMENT",
+        "default": "",
+        "options": 10,
+        "ui": {
+          "keys": 1,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 143,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889128285,
+          "createAt": 1772887622892
+        }
+      },
+      "TgHHFEu1PLiy6fLyIrGsH": {
+        "id": "TgHHFEu1PLiy6fLyIrGsH",
+        "tableId": "wVxArRoYVMGs9UeqKXbfg",
+        "name": "email ",
+        "comment": "",
+        "dataType": "VARCHAR(255) UNIQUE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 128,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887668030,
+          "createAt": 1772887624636
+        }
+      },
+      "etL0BI5pltmO_DpJdRR49": {
+        "id": "etL0BI5pltmO_DpJdRR49",
+        "tableId": "wVxArRoYVMGs9UeqKXbfg",
+        "name": "created_at",
+        "comment": "",
+        "dataType": "DATETIME",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 60,
+          "widthComment": 60,
+          "widthDataType": 60,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887671494,
+          "createAt": 1772887625822
+        }
+      },
+      "Xlg6oM4SuBrkzkN7lfS55": {
+        "id": "Xlg6oM4SuBrkzkN7lfS55",
+        "tableId": "wVxArRoYVMGs9UeqKXbfg",
+        "name": "notification_enabled ",
+        "comment": "",
+        "dataType": "BOOLEAN DEFAULT TRUE",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 113,
+          "widthComment": 60,
+          "widthDataType": 136,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772887679473,
+          "createAt": 1772887626419
+        }
+      },
+      "4zoPMjwwRelM2xWqmoyHj": {
+        "id": "4zoPMjwwRelM2xWqmoyHj",
+        "tableId": "-kKLpwRawj5Ld9pc89wX3",
+        "name": "user_email ",
+        "comment": "",
+        "dataType": "VARCHAR(255) NOT NULL",
+        "default": "",
+        "options": 8,
+        "ui": {
+          "keys": 0,
+          "widthName": 61,
+          "widthComment": 60,
+          "widthDataType": 140,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889391825,
+          "createAt": 1772889345617
+        }
+      },
+      "Z6PkJbucTkiyIPszjBN8j": {
+        "id": "Z6PkJbucTkiyIPszjBN8j",
+        "tableId": "4LPBJismP7BLnwTpDRKCY",
+        "name": "terminal_id ",
+        "comment": "",
+        "dataType": "VARCHAR(10)",
+        "default": "",
+        "options": 0,
+        "ui": {
+          "keys": 0,
+          "widthName": 64,
+          "widthComment": 60,
+          "widthDataType": 75,
+          "widthDefault": 60
+        },
+        "meta": {
+          "updateAt": 1772889596324,
+          "createAt": 1772889579180
+        }
+      }
+    },
+    "relationshipEntities": {
+      "01A8kU-deLabER8A15dJY": {
+        "id": "01A8kU-deLabER8A15dJY",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "KahLtYB3YSCJWHHPiXIan",
+          "columnIds": [
+            "lr8hja4YORba7J8AkBHyd"
+          ],
+          "x": 440.5,
+          "y": 140,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "-kKLpwRawj5Ld9pc89wX3",
+          "columnIds": [
+            "xV4Dg5X4OICtDxr9mR5tP"
+          ],
+          "x": 491.5,
+          "y": 269,
+          "direction": 4
+        },
+        "meta": {
+          "updateAt": 1772882768543,
+          "createAt": 1772882768543
+        }
+      },
+      "bS1Mjp7N_tPQDW6yT5zwY": {
+        "id": "bS1Mjp7N_tPQDW6yT5zwY",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "-kKLpwRawj5Ld9pc89wX3",
+          "columnIds": [
+            "linmGl6M-QSozkPmDVUSQ"
+          ],
+          "x": 1110.3836999999999,
+          "y": 572.2464,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "4LPBJismP7BLnwTpDRKCY",
+          "columnIds": [
+            "WXQDTqT-8Te1uiFbqFk-b"
+          ],
+          "x": 1162.726,
+          "y": 786.8629,
+          "direction": 1
+        },
+        "meta": {
+          "updateAt": 1772886598660,
+          "createAt": 1772886598660
+        }
+      },
+      "HfAB0cXQaXJZmbulc_xPV": {
+        "id": "HfAB0cXQaXJZmbulc_xPV",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "-kKLpwRawj5Ld9pc89wX3",
+          "columnIds": [
+            "linmGl6M-QSozkPmDVUSQ"
+          ],
+          "x": 806.3837,
+          "y": 572.2464,
+          "direction": 8
+        },
+        "end": {
+          "tableId": "C8S5uNKtXaxV0YaqV2tT-",
+          "columnIds": [
+            "tganA6M2xir_ML874-eLX"
+          ],
+          "x": 753.909,
+          "y": 748.1494,
+          "direction": 2
+        },
+        "meta": {
+          "updateAt": 1772886824084,
+          "createAt": 1772886824084
+        }
+      },
+      "XuiAU2TV2tL3R3YjZ1bNF": {
+        "id": "XuiAU2TV2tL3R3YjZ1bNF",
+        "identification": false,
+        "relationshipType": 16,
+        "startRelationshipType": 2,
+        "start": {
+          "tableId": "wVxArRoYVMGs9UeqKXbfg",
+          "columnIds": [
+            "w9Tn69nONo9dK3IQbjARv"
+          ],
+          "x": 780.7234,
+          "y": 678.8464,
+          "direction": 1
+        },
+        "end": {
+          "tableId": "-kKLpwRawj5Ld9pc89wX3",
+          "columnIds": [
+            "4zoPMjwwRelM2xWqmoyHj"
+          ],
+          "x": 646,
+          "y": 538,
+          "direction": 8
+        },
+        "meta": {
+          "updateAt": 1772889345617,
+          "createAt": 1772889345617
+        }
+      }
+    },
+    "indexEntities": {},
+    "indexColumnEntities": {},
+    "memoEntities": {}
+  }
+}
