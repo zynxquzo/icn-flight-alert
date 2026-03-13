@@ -56,3 +56,16 @@ def read_flight(
     - flight_pk로 특정 비행편의 상세 정보 조회
     """
     return flight_service.read_flight_detail(db, flight_pk)
+
+
+@router.delete("/{flight_pk}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_flight(
+    flight_pk: int,
+    db: Session = Depends(get_db),
+):
+    """비행편 삭제
+    
+    - flight_pk로 특정 비행편 삭제
+    - 삭제 시 관련된 로그와 알림도 함께 삭제됨 (CASCADE)
+    """
+    flight_service.delete_flight(db, flight_pk)
