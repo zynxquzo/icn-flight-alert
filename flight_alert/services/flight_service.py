@@ -85,5 +85,14 @@ class FlightService:
         flight = self.read_flight_by_id(db, flight_pk)
         return FlightResponse.model_validate(flight)
 
+    def delete_flight(self, db: Session, flight_pk: int) -> None:
+        """비행편 삭제"""
+        flight = self.read_flight_by_id(db, flight_pk)
+        
+        flight_repository.delete(db, flight)
+        db.commit()
+        
+        logger.info(f"비행편 삭제 완료: flight_pk={flight_pk}, flight_id={flight.flight_id}")
+
 
 flight_service = FlightService()
