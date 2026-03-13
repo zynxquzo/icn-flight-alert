@@ -28,7 +28,6 @@ class FlightService:
             flight_date=flight_data.flight_date,
             flight_type=flight_data.flight_type.value,
             is_active=True,
-            last_checked_at=datetime.utcnow(),
         )
         
         # TODO: 인천공항 API 호출
