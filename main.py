@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from database import engine
 from flight_alert import models
+from flight_alert.routers.flight_router import router as flight_router
 
 
 @asynccontextmanager
@@ -29,10 +30,8 @@ app = FastAPI(
 )
 
 
-# 라우터 등록 (아직 미작성)
-# app.include_router(flights_router)
-# app.include_router(notifications_router)
-# app.include_router(chatbot_router)
+# 라우터 등록
+app.include_router(flight_router)
 
 
 @app.get("/", tags=["Health"])
