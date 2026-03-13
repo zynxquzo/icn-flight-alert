@@ -3,7 +3,7 @@ name = "icn-flight-alert"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.135.1",
     "psycopg2-binary>=2.9.11",
