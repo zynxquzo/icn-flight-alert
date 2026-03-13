@@ -33,5 +33,10 @@ class FlightRepository:
         db.refresh(flight)
         return flight
 
+    def delete(self, db: Session, flight: Flight) -> None:
+        """비행편 삭제"""
+        db.delete(flight)
+        db.flush()
+
 
 flight_repository = FlightRepository()
