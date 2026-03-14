@@ -28,6 +28,7 @@ class FlightService:
             flight_date=flight_data.flight_date,
             flight_type=flight_data.flight_type.value,
             is_active=True,
+            last_checked_at=datetime.utcnow(),
         )
         
         # TODO: 인천공항 API 호출
@@ -92,6 +93,21 @@ class FlightService:
         db.commit()
         
         logger.info(f"비행편 삭제 완료: flight_pk={flight_pk}, flight_id={flight.flight_id}")
+
+    def update_flight_status(self, db: Session, flight_pk: int, is_active: bool) -> Flight:
+        """비행편 활성화 상태 변경"""
+        flight = self.read_flight_by_id(db, flight_pk)
+        
+        # 상태 변경
+        flight.is_active = is_active
+        
+        updated_flight = flight_repository.update(db, flight)
+        db.commit()
+        
+        status_text = "활성화" if is_active else "비활성화"
+        logger.info(f"비행편 상태 변경 완료: flight_pk={flight_pk}, {status_text}")
+        
+        return updated_flight
 
 
 flight_service = FlightService()
