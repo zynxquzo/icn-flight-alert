@@ -109,5 +109,113 @@ class FlightService:
         
         return updated_flight
 
+    def refresh_flight(self, db: Session, flight_pk: int) -> dict:
+        """비행편 정보 수동 갱신
+        
+        인천공항 API를 호출하여 최신 정보로 업데이트하고
+        변경사항이 있으면 로그 생성
+        
+        Returns:
+            dict: 변경 사항 정보
+        """
+        from datetime import datetime, timezone
+        
+        flight = self.read_flight_by_id(db, flight_pk)
+        
+        # 기존 값 저장 (변경 감지용)
+        old_gate = flight.gate_number
+        old_terminal = flight.terminal_id
+        old_estimated = flight.estimated_date_time
+        old_remark = flight.remark
+        
+        # TODO: 인천공항 API 호출
+        # api_data = incheon_api_service.get_flight_info(
+        #     flight_id=flight.flight_id,
+        #     flight_date=flight.flight_date.strftime("%Y%m%d"),
+        #     flight_type=flight.flight_type
+        # )
+        # 
+        # # API 응답 데이터로 업데이트
+        # flight.airline = api_data.get('airline')
+        # flight.airport = api_data.get('airport')
+        # flight.airport_code = api_data.get('airportCode')
+        # flight.terminal_id = api_data.get('terminalid')
+        # flight.gate_number = api_data.get('gatenumber')
+        # flight.schedule_date_time = api_data.get('scheduleDateTime')
+        # flight.estimated_date_time = api_data.get('estimatedDateTime')
+        # flight.remark = api_data.get('remark')
+        # flight.chkin_range = api_data.get('chkinrange')  # 출발편만
+        # flight.carousel = api_data.get('carousel')  # 도착편만
+        # flight.exit_number = api_data.get('exitnumber')  # 도착편만
+        
+        # 마지막 조회 시각 업데이트
+        flight.last_checked_at = datetime.now(timezone.utc)
+        
+        # 변경 사항 감지
+        changes = []
+        
+        if old_gate != flight.gate_number:
+            changes.append({
+                "field": "gate_number",
+                "old_value": old_gate,
+                "new_value": flight.gate_number,
+                "change_type": "gate_change"
+            })
+        
+        if old_terminal != flight.terminal_id:
+            changes.append({
+                "field": "terminal_id",
+                "old_value": old_terminal,
+                "new_value": flight.terminal_id,
+                "change_type": "terminal_change"
+            })
+        
+        if old_estimated != flight.estimated_date_time:
+            changes.append({
+                "field": "estimated_date_time",
+                "old_value": old_estimated,
+                "new_value": flight.estimated_date_time,
+                "change_type": "delay"
+            })
+        
+        if old_remark != flight.remark:
+            changes.append({
+                "field": "remark",
+                "old_value": old_remark,
+                "new_value": flight.remark,
+                "change_type": "status_change"
+            })
+        
+        # TODO: 변경 사항이 있으면 FlightStatusLog 생성
+        # if changes:
+        #     for change in changes:
+        #         log = FlightStatusLog(
+        #             flight_pk=flight_pk,
+        #             schedule_date_time=flight.schedule_date_time,
+        #             estimated_date_time=flight.estimated_date_time,
+        #             terminal_id=flight.terminal_id,
+        #             gate_number=flight.gate_number,
+        #             remark=flight.remark,
+        #             carousel=flight.carousel,
+        #             change_type=change['change_type'],
+        #         )
+        #         db.add(log)
+        
+        # 업데이트 반영
+        flight_repository.update(db, flight)
+        db.commit()
+        
+        logger.info(
+            f"비행편 갱신 완료: flight_pk={flight_pk}, "
+            f"변경사항={len(changes)}건"
+        )
+        
+        return {
+            "flight_pk": flight_pk,
+            "changes_detected": len(changes) > 0,
+            "changes": changes,
+            "updated_at": flight.last_checked_at
+        }
+
 
 flight_service = FlightService()
