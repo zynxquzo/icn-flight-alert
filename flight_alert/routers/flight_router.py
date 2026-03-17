@@ -10,6 +10,7 @@ from flight_alert.schemas.flight import (
     FlightCreate,
     FlightResponse,
     FlightListResponse,
+    FlightUpdateStatus,
 )
 
 router = APIRouter(prefix="/flights", tags=["Flights"])
@@ -69,3 +70,17 @@ def delete_flight(
     - 삭제 시 관련된 로그와 알림도 함께 삭제됨 (CASCADE)
     """
     flight_service.delete_flight(db, flight_pk)
+
+
+@router.patch("/{flight_pk}/status", response_model=FlightResponse)
+def update_flight_status(
+    flight_pk: int,
+    status_data: FlightUpdateStatus,
+    db: Session = Depends(get_db),
+):
+    """비행편 활성화 상태 변경
+    
+    - is_active를 true/false로 변경하여 모니터링 활성화/비활성화
+    - 비활성화된 비행편은 스케줄러에서 조회하지 않음
+    """
+    return flight_service.update_flight_status(db, flight_pk, status_data.is_active)
