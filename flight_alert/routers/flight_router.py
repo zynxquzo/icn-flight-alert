@@ -84,3 +84,17 @@ def update_flight_status(
     - 비활성화된 비행편은 스케줄러에서 조회하지 않음
     """
     return flight_service.update_flight_status(db, flight_pk, status_data.is_active)
+
+
+@router.post("/{flight_pk}/refresh")
+def refresh_flight(
+    flight_pk: int,
+    db: Session = Depends(get_db),
+):
+    """비행편 정보 수동 갱신
+    
+    - 인천공항 OpenAPI를 호출하여 최신 비행편 정보로 업데이트
+    - 변경 사항(게이트, 터미널, 지연 등) 감지 및 반환
+    - TODO: 실제 API 연동 및 FlightStatusLog 생성
+    """
+    return flight_service.refresh_flight(db, flight_pk)
