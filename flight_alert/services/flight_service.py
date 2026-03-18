@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from flight_alert.models.flight import Flight
 from flight_alert.repositories.flight_repository import flight_repository
+from flight_alert.services.incheon_api_service import incheon_api_service
 from flight_alert.schemas.flight import (
     FlightCreate,
     FlightResponse,
@@ -19,27 +20,46 @@ class FlightService:
     def create_flight(self, db: Session, flight_data: FlightCreate) -> Flight:
         """비행편 등록
         
-        TODO: 인천공항 API 호출하여 실제 비행편 정보 조회 후 저장
-        현재는 기본 정보만 저장
+        인천공항 API 호출하여 실제 비행편 정보 조회 후 저장
         """
-        flight = Flight(
-            user_email=flight_data.user_email,
+        # 인천공항 API 호출
+        api_data = incheon_api_service.get_flight_info(
             flight_id=flight_data.flight_id,
             flight_date=flight_data.flight_date,
             flight_type=flight_data.flight_type.value,
-            is_active=True,
-            last_checked_at=datetime.utcnow(),
+            airport_code=None  # 전체 검색
         )
         
-        # TODO: 인천공항 API 호출
-        # api_data = incheon_api_service.get_flight_info(
-        #     flight_id=flight_data.flight_id,
-        #     flight_date=flight_data.flight_date.strftime("%Y%m%d"),
-        #     flight_type=flight_data.flight_type.value
-        # )
-        # flight.airline = api_data.get('airline')
-        # flight.airport = api_data.get('airport')
-        # ...
+        # API 호출 실패 시 기본 정보만 저장
+        if not api_data:
+            logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")
+            flight = Flight(
+                user_email=flight_data.user_email,
+                flight_id=flight_data.flight_id,
+                flight_date=flight_data.flight_date,
+                flight_type=flight_data.flight_type.value,
+                is_active=True,
+            )
+        else:
+            # API 데이터로 Flight 객체 생성
+            flight = Flight(
+                user_email=flight_data.user_email,
+                flight_id=api_data.get('flightId'),
+                flight_date=flight_data.flight_date,
+                flight_type=flight_data.flight_type.value,
+                airline=api_data.get('airline'),
+                airport=api_data.get('airport'),
+                airport_code=api_data.get('airportCode'),
+                terminal_id=api_data.get('terminalid'),
+                gate_number=api_data.get('gatenumber'),
+                schedule_date_time=api_data.get('scheduleDateTime'),
+                estimated_date_time=api_data.get('estimatedDateTime'),
+                remark=api_data.get('remark'),
+                chkin_range=api_data.get('chkinrange'),  # 출발편만
+                carousel=api_data.get('carousel'),  # 도착편만
+                exit_number=api_data.get('exitnumber'),  # 도착편만
+                is_active=True,
+            )
         
         saved_flight = flight_repository.save(db, flight)
         db.commit()
@@ -128,25 +148,29 @@ class FlightService:
         old_estimated = flight.estimated_date_time
         old_remark = flight.remark
         
-        # TODO: 인천공항 API 호출
-        # api_data = incheon_api_service.get_flight_info(
-        #     flight_id=flight.flight_id,
-        #     flight_date=flight.flight_date.strftime("%Y%m%d"),
-        #     flight_type=flight.flight_type
-        # )
-        # 
-        # # API 응답 데이터로 업데이트
-        # flight.airline = api_data.get('airline')
-        # flight.airport = api_data.get('airport')
-        # flight.airport_code = api_data.get('airportCode')
-        # flight.terminal_id = api_data.get('terminalid')
-        # flight.gate_number = api_data.get('gatenumber')
-        # flight.schedule_date_time = api_data.get('scheduleDateTime')
-        # flight.estimated_date_time = api_data.get('estimatedDateTime')
-        # flight.remark = api_data.get('remark')
-        # flight.chkin_range = api_data.get('chkinrange')  # 출발편만
-        # flight.carousel = api_data.get('carousel')  # 도착편만
-        # flight.exit_number = api_data.get('exitnumber')  # 도착편만
+        # 인천공항 API 호출
+        api_data = incheon_api_service.get_flight_info(
+            flight_id=flight.flight_id,
+            flight_date=flight.flight_date,
+            flight_type=flight.flight_type,
+            airport_code=flight.airport_code
+        )
+        
+        # API 응답 데이터로 업데이트
+        if api_data:
+            flight.airline = api_data.get('airline')
+            flight.airport = api_data.get('airport')
+            flight.airport_code = api_data.get('airportCode')
+            flight.terminal_id = api_data.get('terminalid')
+            flight.gate_number = api_data.get('gatenumber')
+            flight.schedule_date_time = api_data.get('scheduleDateTime')
+            flight.estimated_date_time = api_data.get('estimatedDateTime')
+            flight.remark = api_data.get('remark')
+            flight.chkin_range = api_data.get('chkinrange')  # 출발편만
+            flight.carousel = api_data.get('carousel')  # 도착편만
+            flight.exit_number = api_data.get('exitnumber')  # 도착편만
+        else:
+            logger.warning(f"API 호출 실패 - 기존 데이터 유지: flight_pk={flight_pk}")
         
         # 마지막 조회 시각 업데이트
         flight.last_checked_at = datetime.now(timezone.utc)
