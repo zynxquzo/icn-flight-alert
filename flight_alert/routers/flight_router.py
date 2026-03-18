@@ -6,12 +6,14 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from flight_alert.services.flight_service import flight_service
+from flight_alert.services.flight_status_log_service import flight_status_log_service
 from flight_alert.schemas.flight import (
     FlightCreate,
     FlightResponse,
     FlightListResponse,
     FlightUpdateStatus,
 )
+from flight_alert.schemas.flight_status_log import FlightStatusLogResponse
 
 router = APIRouter(prefix="/flights", tags=["Flights"])
 
@@ -98,3 +100,18 @@ def refresh_flight(
     - TODO: 실제 API 연동 및 FlightStatusLog 생성
     """
     return flight_service.refresh_flight(db, flight_pk)
+
+
+@router.get("/{flight_pk}/logs", response_model=list[FlightStatusLogResponse])
+def read_flight_logs(
+    flight_pk: int,
+    change_type: str | None = Query(None, description="변경 타입 필터 (gate_change/delay/status_change/terminal_change)"),
+    db: Session = Depends(get_db),
+):
+    """비행편 상태 변경 이력 조회
+    
+    - flight_pk로 해당 비행편의 모든 상태 변경 로그 조회
+    - change_type으로 특정 변경 타입만 필터링 가능
+    - 최근 감지 순으로 정렬
+    """
+    return flight_status_log_service.read_flight_logs(db, flight_pk, change_type)
