@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from flight_alert.models.flight import Flight
 from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.services.incheon_api_service import incheon_api_service
+from flight_alert.exceptions import NotFoundException
 from flight_alert.schemas.flight import (
     FlightCreate,
     FlightResponse,
@@ -97,7 +98,7 @@ class FlightService:
         """비행편 상세 조회"""
         flight = flight_repository.find_by_id(db, flight_pk)
         if not flight:
-            raise ValueError(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
+            raise NotFoundException(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
         return flight
 
     def read_flight_detail(self, db: Session, flight_pk: int) -> FlightResponse:
