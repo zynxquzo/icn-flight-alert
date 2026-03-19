@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from flight_alert.models.flight import Flight
 from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.services.incheon_api_service import incheon_api_service
+from flight_alert.services.email_service import email_service
 from flight_alert.exceptions import NotFoundException
 from flight_alert.schemas.flight import (
     FlightCreate,
@@ -212,9 +213,25 @@ class FlightService:
                 message=message,
                 sent_to=flight.user_email,
                 sent_at=datetime.now(timezone.utc),
-                is_sent=False,  # TODO: 이메일 발송 후 True로 변경
+                is_sent=False,
             )
             db.add(notification)
+            db.flush()  # notification_id 생성
+            
+            # 이메일 발송
+            email_sent = email_service.send_notification_email(
+                to_email=flight.user_email,
+                subject=f"[게이트 변경] {flight.flight_id} - 인천공항 알림",
+                message=message,
+                flight_id=flight.flight_id,
+            )
+            
+            if email_sent:
+                notification.is_sent = True
+                logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
+            else:
+                logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
+            
             logger.info(f"게이트 변경 감지: {old_gate} → {flight.gate_number}")
         
         # 터미널 변경 감지
@@ -251,6 +268,22 @@ class FlightService:
                 is_sent=False,
             )
             db.add(notification)
+            db.flush()
+            
+            # 이메일 발송
+            email_sent = email_service.send_notification_email(
+                to_email=flight.user_email,
+                subject=f"[터미널 변경] {flight.flight_id} - 인천공항 알림",
+                message=message,
+                flight_id=flight.flight_id,
+            )
+            
+            if email_sent:
+                notification.is_sent = True
+                logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
+            else:
+                logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
+            
             logger.info(f"터미널 변경 감지: {old_terminal} → {flight.terminal_id}")
         
         # 지연 감지
@@ -292,6 +325,22 @@ class FlightService:
                 is_sent=False,
             )
             db.add(notification)
+            db.flush()
+            
+            # 이메일 발송
+            email_sent = email_service.send_notification_email(
+                to_email=flight.user_email,
+                subject=f"[시간 변경] {flight.flight_id} - 인천공항 알림",
+                message=message,
+                flight_id=flight.flight_id,
+            )
+            
+            if email_sent:
+                notification.is_sent = True
+                logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
+            else:
+                logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
+            
             logger.info(f"지연 감지: {old_estimated} → {flight.estimated_date_time}")
         
         # 운항 상태 변경 감지
@@ -337,6 +386,22 @@ class FlightService:
                     is_sent=False,
                 )
                 db.add(notification)
+                db.flush()
+                
+                # 이메일 발송
+                email_sent = email_service.send_notification_email(
+                    to_email=flight.user_email,
+                    subject=f"[결항] {flight.flight_id} - 인천공항 알림",
+                    message=message,
+                    flight_id=flight.flight_id,
+                )
+                
+                if email_sent:
+                    notification.is_sent = True
+                    logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
+                else:
+                    logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
+                
                 logger.info(f"운항 상태 변경 감지: {old_remark} → {flight.remark}")
         
         # 업데이트 반영
