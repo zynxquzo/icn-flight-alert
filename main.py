@@ -4,6 +4,7 @@ ICN Flight Alert API
 인천공항 비행편 실시간 모니터링 및 알림 시스템
 """
 
+import logging
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
@@ -13,6 +14,12 @@ from flight_alert.routers.flight_router import router as flight_router
 from flight_alert.routers.notification_router import router as notification_router
 from flight_alert.exception_handlers import register_exception_handlers
 from flight_alert.services.scheduler_service import flight_scheduler
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 @asynccontextmanager
