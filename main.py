@@ -12,6 +12,7 @@ from flight_alert import models
 from flight_alert.routers.flight_router import router as flight_router
 from flight_alert.routers.notification_router import router as notification_router
 from flight_alert.exception_handlers import register_exception_handlers
+from flight_alert.services.scheduler_service import flight_scheduler
 
 
 @asynccontextmanager
@@ -20,10 +21,13 @@ async def lifespan(app: FastAPI):
     # 서버 시작 시: 테이블 생성
     models.Base.metadata.create_all(bind=engine)
     
+    # 스케줄러 시작 (10분 주기)
+    flight_scheduler.start(interval_minutes=10)
+    
     yield
     
-    # 서버 종료 시: 정리 작업 (필요시)
-    pass
+    # 서버 종료 시: 스케줄러 중지
+    flight_scheduler.stop()
 
 
 app = FastAPI(
