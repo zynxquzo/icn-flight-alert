@@ -11,6 +11,7 @@ from database import engine
 from flight_alert import models
 from flight_alert.routers.flight_router import router as flight_router
 from flight_alert.routers.notification_router import router as notification_router
+from flight_alert.exception_handlers import register_exception_handlers
 
 
 @asynccontextmanager
@@ -18,7 +19,9 @@ async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리"""
     # 서버 시작 시: 테이블 생성
     models.Base.metadata.create_all(bind=engine)
+    
     yield
+    
     # 서버 종료 시: 정리 작업 (필요시)
     pass
 
@@ -30,6 +33,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Exception Handler 등록
+register_exception_handlers(app)
 
 # 라우터 등록
 app.include_router(flight_router)
