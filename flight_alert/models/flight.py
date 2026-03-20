@@ -5,7 +5,7 @@ Flight Model
 """
 
 from datetime import datetime, date
-from sqlalchemy import String, Date, DateTime, Boolean, func
+from sqlalchemy import String, Date, DateTime, Boolean, Integer, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 from typing import TYPE_CHECKING
@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .flight_status_log import FlightStatusLog
     from .notification import Notification
+    from .user import User
 
 
 class Flight(Base):
@@ -23,6 +24,7 @@ class Flight(Base):
     flight_pk: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     
     # User Information
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)  # ✅ 추가
     user_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     
     # Flight Basic Information
