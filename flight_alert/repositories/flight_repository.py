@@ -12,8 +12,23 @@ class FlightRepository:
         user_email: str, 
         is_active: bool | None = None
     ) -> list[Flight]:
-        """이메일로 비행편 목록 조회"""
+        """이메일로 비행편 목록 조회 (하위 호환)"""
         stmt = select(Flight).where(Flight.user_email == user_email)
+        
+        if is_active is not None:
+            stmt = stmt.where(Flight.is_active == is_active)
+        
+        result = db.scalars(stmt)
+        return result.all()
+    
+    def find_all_by_user_id(
+        self, 
+        db: Session, 
+        user_id: int, 
+        is_active: bool | None = None
+    ) -> list[Flight]:
+        """user_id로 비행편 목록 조회"""
+        stmt = select(Flight).where(Flight.user_id == user_id)
         
         if is_active is not None:
             stmt = stmt.where(Flight.is_active == is_active)
