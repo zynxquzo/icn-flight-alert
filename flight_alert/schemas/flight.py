@@ -17,7 +17,6 @@ class FlightType(str, Enum):
 
 class FlightCreate(BaseModel):
     """비행편 등록 요청"""
-    user_email: EmailStr = Field(..., description="사용자 이메일")
     flight_id: str = Field(..., min_length=2, max_length=10, description="항공편명 (예: KE123)")
     flight_date: date = Field(..., description="출발/도착 날짜 (YYYY-MM-DD)")
     flight_type: FlightType = Field(..., description="'departure' or 'arrival'")
@@ -26,6 +25,7 @@ class FlightCreate(BaseModel):
 class FlightResponse(BaseModel):
     """비행편 상세 응답"""
     flight_pk: int
+    user_id: int 
     user_email: str
     flight_id: str | None
     flight_date: date | None
