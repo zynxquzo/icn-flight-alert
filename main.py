@@ -12,6 +12,7 @@ from database import engine
 from flight_alert import models
 from flight_alert.routers.flight_router import router as flight_router
 from flight_alert.routers.notification_router import router as notification_router
+from flight_alert.routers.chatbot_router import router as chatbot_router
 from flight_alert.exception_handlers import register_exception_handlers
 from flight_alert.services.scheduler_service import flight_scheduler
 
@@ -50,6 +51,7 @@ register_exception_handlers(app)
 # 라우터 등록
 app.include_router(flight_router)
 app.include_router(notification_router)
+app.include_router(chatbot_router) 
 
 
 @app.get("/", tags=["Health"])
