@@ -19,7 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class FlightService:
-    def create_flight(self, db: Session, flight_data: FlightCreate) -> Flight:
+    def create_flight(
+        self, 
+        db: Session, 
+        flight_data: FlightCreate,
+        user_id: int,
+        user_email: str
+    ) -> Flight:
         """비행편 등록
         
         인천공항 API 호출하여 실제 비행편 정보 조회 후 저장
@@ -36,7 +42,8 @@ class FlightService:
         if not api_data:
             logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")
             flight = Flight(
-                user_email=flight_data.user_email,
+                user_id=user_id,  # ✅ 추가
+                user_email=user_email,  # ✅ 수정
                 flight_id=flight_data.flight_id,
                 flight_date=flight_data.flight_date,
                 flight_type=flight_data.flight_type.value,
@@ -45,7 +52,8 @@ class FlightService:
         else:
             # API 데이터로 Flight 객체 생성
             flight = Flight(
-                user_email=flight_data.user_email,
+                user_id=user_id,  # ✅ 추가
+                user_email=user_email,  # ✅ 수정
                 flight_id=api_data.get('flightId'),
                 flight_date=flight_data.flight_date,
                 flight_type=flight_data.flight_type.value,
@@ -72,11 +80,11 @@ class FlightService:
     def read_flights(
         self, 
         db: Session, 
-        user_email: str, 
+        user_id: int, 
         is_active: bool | None = None
     ) -> list[FlightListResponse]:
-        """비행편 목록 조회"""
-        flights = flight_repository.find_all_by_email(db, user_email, is_active)
+        """비행편 목록 조회 (로그인한 사용자의 비행편만)"""
+        flights = flight_repository.find_all_by_user_id(db, user_id, is_active)
         
         return [
             FlightListResponse(
