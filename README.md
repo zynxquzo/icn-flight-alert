@@ -301,6 +301,5 @@ OPENAI_API_KEY=sk-proj-...
 
 ## 👨‍💻 Author
 
-**Your Name**
 - GitHub: [@zynxquzo](https://github.com/zynxquzo)
 - Email: prettymysky@gmail.com
