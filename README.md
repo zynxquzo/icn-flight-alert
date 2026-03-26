@@ -338,6 +338,12 @@ OPENAI_API_KEY=sk-proj-...
 
 ---
 
+## 🔗 관련 저장소
+
+* **Frontend**: [icn-flight-alert-frontend](https://github.com/zynxquzo/icn-flight-alert-frontend)
+
+---
+
 ## 👨‍💻 Author
 
 - GitHub: [@zynxquzo](https://github.com/zynxquzo)
