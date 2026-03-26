@@ -58,7 +58,7 @@ def chat(request: ChatRequest):
     )
 
 
-@router.get("/", tags=["Chatbot"])
+@router.get("", tags=["Chatbot"])
 def chatbot_info():
     """챗봇 서비스 정보"""
     return {
