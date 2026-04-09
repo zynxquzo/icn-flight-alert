@@ -6,7 +6,6 @@ import os
 
 import pytest
 
-# auth_service 모듈 로드 시 JWT_SECRET_KEY 필수
 os.environ.setdefault(
     "JWT_SECRET_KEY",
     "test-secret-key-for-pytest-only-do-not-use-in-production",
@@ -14,15 +13,15 @@ os.environ.setdefault(
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 os.environ.setdefault("JWT_EXPIRE_MINUTES", "30")
 os.environ.setdefault("INCHEON_AIRPORT_API_KEY", "test-api-key")
+# 테스트는 인메모리 블랙리스트 (REDIS_URL 미설정)
+os.environ.pop("REDIS_URL", None)
 
 
 @pytest.fixture(autouse=True)
-def _clear_auth_blacklist():
-    """테스트 간 JWT 블랙리스트 메모리 오염 방지."""
-    from flight_alert.services.auth_service import AuthService
+async def _clear_auth_blacklist():
+    """테스트 간 JWT 블랙리스트 오염 방지."""
+    from flight_alert.services.token_blacklist import token_blacklist
 
-    with AuthService._blacklist_lock:
-        AuthService._token_blacklist.clear()
+    await token_blacklist.clear()
     yield
-    with AuthService._blacklist_lock:
-        AuthService._token_blacklist.clear()
+    await token_blacklist.clear()

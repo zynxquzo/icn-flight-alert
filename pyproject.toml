@@ -18,6 +18,8 @@ dependencies = [
     "psycopg2-binary>=2.9.11",
     "pyjwt>=2.12.1",
     "python-dotenv>=1.2.2",
+    "redis>=5.2.0",
+    "sentry-sdk[fastapi]>=2.20.0",
     "sqlalchemy>=2.0.48",
 ]
 

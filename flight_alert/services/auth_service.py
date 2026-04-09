@@ -9,16 +9,15 @@ import hashlib
 import logging
 import os
 import secrets
-import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from flight_alert.config import get_settings
 from flight_alert.exceptions import UnauthorizedException
 from flight_alert.models.user import User
 from flight_alert.models.user_security_token import SecurityTokenKind
@@ -26,26 +25,19 @@ from flight_alert.repositories.token_repository import token_repository
 from flight_alert.repositories.user_repository import user_repository
 from flight_alert.schemas.user import UserCreate, UserLogin
 from flight_alert.services.email_service import email_service
-
-load_dotenv()
+from flight_alert.services.token_blacklist import token_blacklist
 
 logger = logging.getLogger(__name__)
 
-SECRET_RAW = os.getenv("JWT_SECRET_KEY")
-if not SECRET_RAW or not str(SECRET_RAW).strip():
-    raise ValueError("JWT_SECRET_KEY 환경 변수가 설정되지 않았습니다")
-SECRET_KEY = str(SECRET_RAW).strip()
-ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))
-REFRESH_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_EXPIRE_DAYS", "14"))
+_settings = get_settings()
+SECRET_KEY = _settings.jwt_secret_key
+ALGORITHM = _settings.jwt_algorithm
+EXPIRE_MINUTES = _settings.jwt_expire_minutes
+REFRESH_EXPIRE_DAYS = _settings.jwt_refresh_expire_days
 EMAIL_VERIFY_HOURS = int(os.getenv("EMAIL_VERIFY_TOKEN_EXPIRE_HOURS", "24"))
 PASSWORD_RESET_HOURS = int(os.getenv("PASSWORD_RESET_TOKEN_EXPIRE_HOURS", "1"))
-FRONTEND_PUBLIC_URL = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:5173").rstrip("/")
-REQUIRE_EMAIL_VERIFICATION = os.getenv("REQUIRE_EMAIL_VERIFICATION", "").lower() in (
-    "1",
-    "true",
-    "yes",
-)
+FRONTEND_PUBLIC_URL = _settings.frontend_public_url
+REQUIRE_EMAIL_VERIFICATION = _settings.require_email_verification
 
 
 def _exp_to_unix_ts(exp: object) -> float:
@@ -70,32 +62,17 @@ def _new_opaque_token() -> str:
 class AuthService:
     """인증 서비스"""
 
-    _token_blacklist: dict[str, float] = {}
-    _blacklist_lock = threading.Lock()
-
     def _hash_password(self, password: str) -> str:
         return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
     def _verify_password(self, password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
-    def _purge_blacklist_unlocked(self) -> None:
-        now = datetime.now(timezone.utc).timestamp()
-        dead = [jti for jti, exp_ts in self._token_blacklist.items() if exp_ts <= now]
-        for jti in dead:
-            del self._token_blacklist[jti]
+    async def _is_jti_revoked(self, jti: str | None) -> bool:
+        return await token_blacklist.is_revoked(jti)
 
-    def _is_jti_revoked(self, jti: str | None) -> bool:
-        if not jti:
-            return False
-        with self._blacklist_lock:
-            self._purge_blacklist_unlocked()
-            return jti in self._token_blacklist
-
-    def _add_to_blacklist(self, jti: str, exp_unix: float) -> None:
-        with self._blacklist_lock:
-            self._purge_blacklist_unlocked()
-            self._token_blacklist[jti] = exp_unix
+    async def _add_to_blacklist(self, jti: str, exp_unix: float) -> None:
+        await token_blacklist.revoke(jti, exp_unix)
 
     def _create_access_token(self, user_id: int) -> str:
         expire = datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES)
@@ -215,7 +192,7 @@ class AuthService:
             raise UnauthorizedException("TOKEN_INVALID", "유효하지 않은 토큰입니다.")
 
         jti = payload.get("jti")
-        if isinstance(jti, str) and self._is_jti_revoked(jti):
+        if isinstance(jti, str) and await self._is_jti_revoked(jti):
             raise UnauthorizedException(
                 "TOKEN_REVOKED",
                 "로그아웃되었거나 무효화된 토큰입니다.",
@@ -250,12 +227,12 @@ class AuthService:
             if isinstance(jti, str) and jti:
                 exp_unix = _exp_to_unix_ts(payload.get("exp"))
                 if exp_unix > datetime.now(timezone.utc).timestamp():
-                    self._add_to_blacklist(jti, exp_unix)
+                    await self._add_to_blacklist(jti, exp_unix)
 
         await token_repository.revoke_all_refresh_for_user(db, user_id)
         await db.commit()
 
-    def logout_blacklist_only(self, token: str) -> None:
+    async def logout_blacklist_only(self, token: str) -> None:
         """Bearer만 무효화 (DB 세션 없이 호출할 때)."""
         try:
             payload = jwt.decode(
@@ -275,7 +252,7 @@ class AuthService:
         if exp_unix <= datetime.now(timezone.utc).timestamp():
             return
 
-        self._add_to_blacklist(jti, exp_unix)
+        await self._add_to_blacklist(jti, exp_unix)
 
     async def forgot_password(self, db: AsyncSession, email: str) -> None:
         user = await user_repository.find_by_email(db, email.strip())

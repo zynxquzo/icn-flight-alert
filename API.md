@@ -155,19 +155,42 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 2.2 헬스 체크 (간단)
+### 2.2 헬스 체크 (확장)
 
 **Endpoint**: `GET /health`
 
-**설명**: 최소 형태의 상태 확인.
+**설명**: 프로세스 가동 여부와 함께 DB·Redis·스케줄러 상태를 확인합니다. 요청마다 `X-Request-ID` 헤더가 응답에 포함됩니다(미전송 시 서버가 UUID 생성).
 
 **Response (200)**:
 
 ```json
 {
-  "status": "healthy"
+  "status": "healthy",
+  "timestamp": "2026-05-22T12:00:00+00:00",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "checks": {
+    "database": { "status": "ok" },
+    "redis": { "status": "ok" },
+    "scheduler": {
+      "enabled": true,
+      "running": true,
+      "interval_minutes": 10,
+      "last_run_at": "2026-05-22T11:50:00+00:00",
+      "last_run_status": "ok",
+      "leader_lock": true,
+      "is_leader": true
+    }
+  }
 }
 ```
+
+| `checks.*.status` | 설명 |
+| :--- | :--- |
+| `ok` | 정상 |
+| `skipped` | Redis 미설정 등으로 검사 생략 |
+| `fail` | 연결·실행 실패 (`status`가 `unhealthy`로 올라갈 수 있음) |
+
+`scheduler.last_run_status`: `ok` \| `error` \| `skipped` (리더가 아닌 인스턴스에서 job 스킵 시 `skipped`).
 
 ---
 
@@ -245,7 +268,7 @@ Authorization: Bearer {access_token}
 
 **Endpoint**: `POST /auth/logout`
 
-**설명**: 현재 `Authorization: Bearer` 토큰의 `jti`를 서버 인메모리 블랙리스트에 올려, 만료 시각까지 재사용할 수 없게 합니다. 클라이언트는 응답 후 로컬에 저장한 토큰도 삭제하는 것을 권장합니다.
+**설명**: 현재 `Authorization: Bearer` 토큰의 `jti`를 블랙리스트에 올려, 만료 시각까지 재사용할 수 없게 합니다. `REDIS_URL`이 설정되면 Redis에 `jwt:blacklist:{jti}` 키로 TTL 저장되어 **다중 인스턴스**에서도 무효화가 공유됩니다. 클라이언트는 응답 후 로컬에 저장한 토큰도 삭제하는 것을 권장합니다.
 
 **Headers**:
 
@@ -262,7 +285,7 @@ Authorization: Bearer {access_token}
 | **401** | **C)** 형식 (`TOKEN_MISSING` 등) | Bearer 없음·형식 오류 |
 | **401** | **C)** 형식 (`TOKEN_EXPIRED` 등) | 토큰 만료·무효 |
 
-> **운영 참고**: 블랙리스트는 프로세스 메모리에만 있으므로 **단일 워커/인스턴스**에 적합합니다. 수평 확장 시 Redis 등 공유 저장소로 교체하는 것을 권장합니다.
+> **운영 참고**: 프로덕션·다중 워커에서는 **`REDIS_URL` 필수**입니다. 미설정 시 인메모리 폴백(단일 인스턴스·로컬 개발용)으로 동작합니다.
 
 ---
 
@@ -815,6 +838,8 @@ Authorization: Bearer {access_token}
 
 ### 기타
 
-- **JWT**: `JWT_SECRET_KEY`(필수), `JWT_ALGORITHM`(기본 `HS256`), `JWT_EXPIRE_MINUTES`(기본 `30`) — `.env` 참고. 페이로드에 `jti`가 포함되며, `POST /auth/logout` 시 인메모리 블랙리스트에 등록됩니다.
-- **스케줄러**: 앱 기동 시 비행편 주기 갱신(기본 10분) — `main.py` `lifespan`.
+- **JWT**: `JWT_SECRET_KEY`(필수), `JWT_ALGORITHM`(기본 `HS256`), `JWT_EXPIRE_MINUTES`(기본 `30`). `jti`는 `POST /auth/logout` 시 블랙리스트 등록 — **`REDIS_URL` 설정 시 Redis 공유**, 미설정 시 인메모리.
+- **Redis**: `REDIS_URL` — JWT 블랙리스트·스케줄러 리더 락(`SCHEDULER_LEADER_LOCK`, 기본 true).
+- **스케줄러**: `ENABLE_SCHEDULER`(기본 true), `SCHEDULER_INTERVAL_MINUTES`(기본 10). Redis 리더 락으로 **한 인스턴스만** 주기 job 실행.
+- **관측**: `LOG_JSON`, `LOG_LEVEL`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE`. 요청 `X-Request-ID` 헤더 지원.
 - **RAG 문서**: 테이블 `airport_documents`, `VECTOR_BACKEND`, `CHROMA_*` 등은 `README.md` 및 `GET /chatbot` 의 `env` 설명 참고.

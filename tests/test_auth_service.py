@@ -23,18 +23,21 @@ def svc() -> AuthService:
 
 
 class TestJwtBlacklist:
-    def test_revoked_jti_detected(self, svc: AuthService):
+    @pytest.mark.asyncio
+    async def test_revoked_jti_detected(self, svc: AuthService):
         exp = datetime.now(timezone.utc).timestamp() + 3600
-        svc._add_to_blacklist("jti-abc", exp)
-        assert svc._is_jti_revoked("jti-abc") is True
-        assert svc._is_jti_revoked("jti-other") is False
+        await svc._add_to_blacklist("jti-abc", exp)
+        assert await svc._is_jti_revoked("jti-abc") is True
+        assert await svc._is_jti_revoked("jti-other") is False
 
-    def test_expired_jti_purged(self, svc: AuthService):
+    @pytest.mark.asyncio
+    async def test_expired_jti_purged(self, svc: AuthService):
         past = datetime.now(timezone.utc).timestamp() - 10
-        svc._add_to_blacklist("jti-old", past)
-        assert svc._is_jti_revoked("jti-old") is False
+        await svc._add_to_blacklist("jti-old", past)
+        assert await svc._is_jti_revoked("jti-old") is False
 
-    def test_logout_blacklist_only(self, svc: AuthService):
+    @pytest.mark.asyncio
+    async def test_logout_blacklist_only(self, svc: AuthService):
         token = jwt.encode(
             {
                 "sub": "1",
@@ -44,8 +47,8 @@ class TestJwtBlacklist:
             SECRET_KEY,
             algorithm=ALGORITHM,
         )
-        svc.logout_blacklist_only(token)
-        assert svc._is_jti_revoked("logout-jti") is True
+        await svc.logout_blacklist_only(token)
+        assert await svc._is_jti_revoked("logout-jti") is True
 
 
 @pytest.mark.asyncio
@@ -106,7 +109,7 @@ async def test_get_current_user_rejects_blacklisted_jti(svc: AuthService):
         SECRET_KEY,
         algorithm=ALGORITHM,
     )
-    svc._add_to_blacklist(jti, datetime.now(timezone.utc).timestamp() + 3600)
+    await svc._add_to_blacklist(jti, datetime.now(timezone.utc).timestamp() + 3600)
 
     with pytest.raises(UnauthorizedException) as exc_info:
         await svc.get_current_user(mock_db, token)
