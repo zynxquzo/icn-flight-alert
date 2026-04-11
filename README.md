@@ -5,7 +5,10 @@
 ### 최근 업데이트 요약
 
 * **Flight Router**: 모든 비행편 API에 `get_current_user` 적용(로그인 필수). 등록 시 `user_id`·`user_email`은 토큰의 사용자로 자동 연동. 상세/삭제/상태 변경/수동 갱신은 `flight.user_id`와 비교해 본인만 허용, 타인 접근 시 **403 Forbidden**. `GET /flights`는 쿼리 `is_active`로 활성·비활성 필터 가능. **고정 경로**(`POST ""`, `GET ""`)를 **동적 경로**(`/{flight_pk}` …)보다 위에 두어 라우팅 오동작을 방지.
-* **Chatbot Router**: 서비스 소개 엔드포인트를 **`GET /chatbot`**(URL 끝 슬래시 없음)으로 통일. 대화는 **`POST /chatbot/chat`** (JWT 불필요).
+* **Chatbot Router**: 서비스 소개 **`GET /chatbot`**, 대화 **`POST /chatbot/chat`** (JWT 불필요). 응답에 **`mode`**(`legacy` \| `rag` \| `agent`), **`sources`**(근거 문서 `doc_id`·`title`·`source_url`) 포함.
+* **RAG / Agentic**: 인천공항 공식 페이지 크롤·파싱 후 OpenAI `text-embedding-3-small` 임베딩. 문서가 있으면 기본적으로 **도구 호출 에이전트**(벡터·키워드·카테고리 조회)로 답변, 없으면 레거시 LLM 안내.
+* **벡터 저장소**: 기본은 PostgreSQL **`airport_documents.embedding`**(`double precision[]`) + 앱 내 코사인 검색(pgvector 확장 불필요). **`VECTOR_BACKEND=chroma`** 시 동일 API로 **ChromaDB** 영속 저장(로컬 `.chroma_airport` 등).
+* **인덱싱 스크립트**: `scripts/crawl_and_index.py`가 기동 시 없는 테이블을 `create_all`로 생성 후 크롤·임베딩 적재. 선택적으로 `scripts/apply_airport_indexes.py` 및 `scripts/sql/airport_documents_vector_index.sql`(B-tree·`pg_trgm` 등, 벡터 인덱스는 pgvector 설치 시에만 해당).
 * **CORS**: Vite 기본 개발 서버(`http://localhost:5173`, `http://127.0.0.1:5173`) 및 `Authorization` 헤더 허용으로 별도 프론트엔드 저장소와 연동 가능.
 
 ---
@@ -18,7 +21,9 @@
 * **Authentication**: `JWT (JSON Web Token)`, `bcrypt`
 * **External API**: 인천국제공항 공공데이터 OpenAPI
 * **Email Service**: `Gmail SMTP`
-* **AI Service**: `OpenAI GPT-4o-mini`
+* **AI Service**: `OpenAI` (GPT-4o-mini, `text-embedding-3-small` 임베딩)
+* **RAG 저장소**: PostgreSQL 배열 임베딩 또는 선택 **`ChromaDB`** (`chromadb`)
+* **크롤링**: `httpx`, `BeautifulSoup4`, `lxml`
 * **Scheduler**: `APScheduler` (10분 주기 자동 갱신)
 * **Dependency Management**: `uv`
 * **Environment**: `python-dotenv`
@@ -27,7 +32,7 @@
 
 ## 🏗 Database Structure (ERD)
 
-데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다.
+데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다. RAG용 **`AirportDocument`**(`airport_documents`) 테이블은 비행편 도메인과 독립적이며, **`VECTOR_BACKEND=postgres`(기본)** 일 때만 PostgreSQL에 행이 쌓입니다(Chroma 전용 모드에서는 테이블은 비어 있어도 무방).
 
 ![ERD](https://github.com/user-attachments/assets/2b533b1a-9c20-4ffc-9b8b-e2f316af8ec7)
 
@@ -61,11 +66,11 @@
 
 ### 🤖 AI-Powered Airport Assistant
 
-* **OpenAI 연동**: GPT-4o-mini 모델을 활용한 자연스러운 대화
-* **맞춤 추천**: 대기 시간과 터미널 정보를 고려한 개인화된 추천
-* **공항 안내**: 식사, 쇼핑, 휴식 공간, 편의시설 정보 제공
-* **시간별 조언**: 3시간+, 1시간+, 1시간 미만에 따른 차별화된 안내
-* **API 경로**: `GET /chatbot`으로 서비스 소개 JSON 조회, `POST /chatbot/chat`에 `{ "message", "terminal", "wait_time_hours?" }` 전송 (인증 없음)
+* **OpenAI 연동**: GPT-4o-mini 답변, `text-embedding-3-small` 임베딩
+* **RAG**: 인천공항 공식 사이트 기반 문서 인덱싱 후 검색·답변(문서 0건 시 레거시 모드)
+* **Agentic RAG**(기본): `search_airport_docs`, `search_airport_docs_keyword`, `list_airport_doc_categories`, `get_airport_document` 도구 루프
+* **맞춤 추천**: 대기 시간(`wait_time_hours`, `float` 가능)과 터미널을 프롬프트에 반영
+* **API**: `GET /chatbot`(소개·지원 env), `POST /chatbot/chat` 바디 `{ "message", "terminal?", "wait_time_hours?" }` — 응답 `{ "message", "response", "mode", "sources" }`
 
 ### 📊 Comprehensive Logging System
 
@@ -111,15 +116,25 @@
 │  - incheon_api_service.py               │
 │  - email_service.py                     │
 │  - chatbot_service.py                   │
+│  - embedding_service.py                 │
+│  - crawler_service.py                   │
+│  - document_parser_service.py          │
 │  - scheduler_service.py                 │
 └─────────────────────────────────────────┘
               ↓
 ┌─────────────────────────────────────────┐
-│    Repositories (Data Access)           │  ← DB 접근
+│    Repositories (Data Access)           │  ← DB / 벡터 저장소
 │  - user_repository.py                   │
 │  - flight_repository.py                 │
 │  - notification_repository.py           │
 │  - flight_status_log_repository.py      │
+│  - vector_repository.py (+ Chroma 분기) │
+│  - chroma_rag_store.py (선택)           │
+└─────────────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────┐
+│      RAG Agent (OpenAI tools)           │
+│  - flight_alert/rag/agent/              │
 └─────────────────────────────────────────┘
               ↓
 ┌─────────────────────────────────────────┐
@@ -128,6 +143,7 @@
 │  - flight.py                            │
 │  - notification.py                      │
 │  - flight_status_log.py                 │
+│  - airport_document.py (RAG, PG 모드)   │
 └─────────────────────────────────────────┘
 ```
 
@@ -205,8 +221,8 @@
 | `GET` | `/flights/{flight_pk}/logs` |  | 변경 이력, `change_type` 선택 필터 |
 | `GET` | `/notifications` |  | `user_email` 쿼리 필수 |
 | `GET` | `/notifications/flights/{flight_pk}` |  | 해당 비행편 알림 목록 |
-| `GET` | `/chatbot` |  | 소개 정보 (끝 `/` 없음) |
-| `POST` | `/chatbot/chat` |  | 챗봇 대화 |
+| `GET` | `/chatbot` |  | 소개·환경 변수 안내 (끝 `/` 없음) |
+| `POST` | `/chatbot/chat` |  | 챗봇; 응답 `mode`, `sources` 포함 |
 
 프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 붙이면 됩니다.
 
@@ -257,6 +273,19 @@
 * **문제**: 클라이언트가 `GET /chatbot/`만 호출하거나, 반대로 서버만 끝 슬래시 경로를 열어둔 경우 404 또는 리다이렉트가 발생할 수 있음
 * **해결**: 서비스 소개는 **`GET /chatbot`**(슬래시 없음)을 사용. `flight_alert/routers/chatbot_router.py`에서 루트 경로는 `@router.get("")`로 정의되어 `/chatbot`에 매핑됨
 
+### 6. RAG가 동작하지 않고 항상 `mode: legacy`
+
+* **원인**: `airport_documents`에 행이 없거나(또는 Chroma에 컬렉션이 비어 있음), `RAG_ENABLED=false`
+* **해결**: `uv run python scripts/crawl_and_index.py --facilities` 또는 `--all`로 인덱싱. Chroma 사용 시 `.env`에 `VECTOR_BACKEND=chroma` 후 동일 스크립트 실행
+
+### 7. 크롤 스크립트에서 `airport_documents` 테이블 없음
+
+* **해결**: 스크립트가 시작 시 `Base.metadata.create_all`을 호출하므로 `DATABASE_URL`만 맞으면 테이블 생성됨. 이후 다시 크롤 실행
+
+### 8. Windows에서 Chroma / 의존성
+
+* **Chroma**: `VECTOR_BACKEND=chroma`일 때 `CHROMA_PERSIST_DIR`로 저장 경로 지정 가능(기본 프로젝트 루트 `.chroma_airport`, `.gitignore`에 등록됨)
+
 ---
 
 
@@ -277,7 +306,14 @@ cp .env.example .env
 # 4. PostgreSQL 데이터베이스 생성
 createdb flight_alert
 
-# 5. 서버 실행
+# 5. (선택) RAG 문서 인덱싱 — 챗봇에 공항 공식 정보 반영
+uv run python scripts/crawl_and_index.py --facilities
+# 또는: uv run python scripts/crawl_and_index.py --all
+
+# 6. (선택) PostgreSQL에 검색 보조 인덱스 — scripts/sql/airport_documents_vector_index.sql
+#    또는: uv run python scripts/apply_airport_indexes.py
+
+# 7. 서버 실행
 uv run fastapi dev main.py
 ```
 
@@ -304,7 +340,25 @@ SMTP_FROM_EMAIL=your-email@gmail.com
 
 # OpenAI
 OPENAI_API_KEY=sk-proj-...
+
+# RAG / 챗봇 (선택)
+RAG_ENABLED=true
+RAG_AGENT_ENABLED=true
+RAG_TOP_K=5
+RAG_AGENT_MODEL=gpt-4o-mini
+RAG_AGENT_MAX_ROUNDS=5
+
+# 벡터 백엔드: postgres(기본, airport_documents 테이블) | chroma
+VECTOR_BACKEND=postgres
+# CHROMA_PERSIST_DIR=.chroma_airport
+# CHROMA_COLLECTION=airport_documents
 ```
+
+### RAG 동작 확인
+
+1. 위 **인덱싱 스크립트**를 한 번 이상 실행해 문서를 적재합니다.
+2. 서버 기동 후 **`http://localhost:8000/docs`**에서 **`POST /chatbot/chat`**에 `{ "message": "1터미널 환전 어디 있어?", "terminal": "T1" }` 등을 보냅니다.
+3. 응답 **`mode`**가 `agent`(기본 에이전트) 또는 `rag`이고 **`sources`**에 `doc_id`·`title`이 채워지면 RAG가 동작한 것입니다. 문서가 없으면 `legacy`입니다. 프론트엔드는 필수는 아닙니다.
 
 ---
 
@@ -318,11 +372,9 @@ OPENAI_API_KEY=sk-proj-...
 * [x] **AI Chatbot**: OpenAI 기반 공항 안내 챗봇
 * [x] **Exception Handling**: 커스텀 예외 및 전역 핸들러
 * [x] **Frontend (별도 저장소)**: Vite + React 클라이언트와 CORS·JWT 연동 가능 (`icn-flight-alert-frontend` 등)
-* [ ] **Frontend 단일 모노레포**: 본 저장소에 UI 포함
-* [ ] **React Native** 등 모바일 네이티브 앱
 * [ ] **Push Notification**: Firebase Cloud Messaging 연동
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
-* [ ] **RAG Chatbot**: 인천공항 실제 정보 기반 고도화된 챗봇
+* [x] **RAG / Agentic Chatbot**: 공항 공식 정보 크롤·임베딩·도구 호출 기반 챗봇(Chroma 또는 PostgreSQL 배열)
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
 * [ ] **Test Automation**: Pytest를 이용한 유닛 테스트
 
@@ -334,7 +386,7 @@ OPENAI_API_KEY=sk-proj-...
 
 또한 **APScheduler**를 통한 주기적인 백그라운드 작업 처리와 **트랜잭션 관리**를 통한 데이터 무결성 보장의 중요성을 깊이 이해하게 되었습니다. 인천공항 API의 응답 형식을 파싱하고, 변경 사항을 감지하여 자동으로 알림을 생성하는 로직을 구현하며 **복잡한 비즈니스 로직을 체계적으로 설계**하는 능력을 기를 수 있었습니다.
 
-마지막으로 OpenAI GPT-4o-mini를 활용한 **AI 챗봇 통합**을 통해 단순한 CRUD API를 넘어 **AI 기술을 실제 서비스에 접목**하는 경험을 쌓을 수 있었고, 향후 RAG(Retrieval-Augmented Generation) 기반 챗봇으로 고도화하여 더욱 정확한 공항 정보를 제공하는 방향으로 발전시킬 계획입니다.
+마지막으로 OpenAI GPT-4o-mini와 **RAG·에이전틱 도구 호출**을 결합해 인덱싱된 공항 정보를 근거로 답하도록 확장하였으며, PostgreSQL 또는 **ChromaDB**로 벡터 저장소를 선택할 수 있게 하여 로컬 개발·배포 환경에 맞게 조정할 수 있습니다.
 
 ---
 

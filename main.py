@@ -29,7 +29,7 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리"""
-    # 서버 시작 시: 테이블 생성
+    # 서버 시작 시: 테이블 생성 (RAG는 PostgreSQL 배열 또는 VECTOR_BACKEND=chroma)
     models.Base.metadata.create_all(bind=engine)
     
     # 스케줄러 시작 (10분 주기)
