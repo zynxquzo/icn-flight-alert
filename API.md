@@ -1,40 +1,673 @@
-# API
+# ICN Flight Alert — API 명세서 (API Specification)
 
-FastAPI 앱은 `main.py`에서 구동되며, 기본 OpenAPI 문서는 `/docs`, `/redoc` 입니다.  
-DB는 PostgreSQL(`DATABASE_URL`), ORM 모델은 `flight_alert/models/` 와 동일한 테이블 이름을 사용합니다.
+> **Base URL**: 배포 환경에 따라 설정 (로컬 예: `http://127.0.0.1:8000`)  
+> **인증 방식**: Bearer Token (JWT), 엔드포인트별 상이 (아래 각 절 참고)  
+> **응답 형식**: JSON  
+> **문자 인코딩**: UTF-8 (문서·요청 본문은 UTF-8 권장)  
+> **OpenAPI**: `/docs` (Swagger UI), `/redoc`
 
-## 인증
-
-대부분의 비행·사용자 API는 `Authorization: Bearer <JWT>` 헤더가 필요합니다.  
-예외: `/`, `/health`, `/auth/*`, `GET /flights/{flight_pk}/logs`, `GET /notifications/*`, `GET|POST /chatbot/*`.
-
----
-
-## 엔드포인트 요약
-
-| URL | Method | 인증 | 설명 |
-|-----|--------|------|------|
-| `/` | GET | 불필요 | 헬스 체크 (상태·docs 안내) |
-| `/health` | GET | 불필요 | 헬스 체크 (간단) |
-| `/auth/signup` | POST | 불필요 | 회원가입 (`UserCreate`: email, password) → `UserResponse` |
-| `/auth/login` | POST | 불필요 | 로그인 (`UserLogin`) → `TokenResponse` (`access_token`, `token_type`) |
-| `/me` | GET | 필요 | 현재 사용자 정보 (`UserResponse`) |
-| `/flights` | POST | 필요 | 비행편 등록 (`FlightCreate`: flight_id, flight_date, flight_type) → `FlightResponse` |
-| `/flights` | GET | 필요 | 내 비행편 목록. 쿼리: `is_active` (bool, 선택) → `FlightListResponse[]` |
-| `/flights/{flight_pk}` | GET | 필요 | 비행편 상세 (본인만) → `FlightResponse` |
-| `/flights/{flight_pk}` | DELETE | 필요 | 비행편 삭제 (본인만, CASCADE로 로그·알림 포함) |
-| `/flights/{flight_pk}/status` | PATCH | 필요 | 모니터링 on/off (`FlightUpdateStatus`: is_active) → `FlightResponse` |
-| `/flights/{flight_pk}/refresh` | POST | 필요 | 인천공항 API로 수동 갱신 (본인만) |
-| `/flights/{flight_pk}/logs` | GET | **불필요** | 상태 변경 이력. 쿼리: `change_type` (선택: gate_change/delay/status_change/terminal_change) → `FlightStatusLogResponse[]` |
-| `/notifications/flights/{flight_pk}` | GET | 불필요 | 해당 비행편 알림 목록 → `NotificationListResponse[]` |
-| `/notifications` | GET | 불필요 | 사용자 전체 알림. 쿼리: **`user_email` (필수)**, `notification_type` (선택) → `NotificationResponse[]` |
-| `/chatbot/chat` | POST | 불필요 | 챗봇. JSON: `message`, `terminal` (기본 `T1`), `wait_time_hours` (선택) → `ChatResponse` (message, response, mode, sources) |
-| `/chatbot` | GET | 불필요 | 챗봇 서비스·환경 변수 안내 JSON |
+애플리케이션 엔트리: `main.py`. DB는 PostgreSQL (`DATABASE_URL`), 스키마는 `flight_alert/models/` 와 대응합니다.
 
 ---
 
-## 참고
+## 목차
 
-- **CORS**: `main.py`에서 `localhost:5173`, `127.0.0.1:5173` 만 허용.
-- **스케줄러**: 앱 시작 시 비행편 주기 갱신(기본 10분) — `main.py` `lifespan`.
-- **RAG**: `airport_documents` 테이블·`VECTOR_BACKEND` 등은 챗봇 `GET /chatbot` 응답의 `env` 필드와 `README.md`를 참고.
+1. [공통 규칙](#1-공통-규칙)
+2. [헬스 (Health)](#2-헬스-health)
+3. [인증 (Authentication)](#3-인증-authentication)
+4. [사용자 (User)](#4-사용자-user)
+5. [비행편 (Flights)](#5-비행편-flights)
+6. [알림 (Notifications)](#6-알림-notifications)
+7. [챗봇 (Chatbot)](#7-챗봇-chatbot)
+8. [부록: 열거형·참고](#8-부록-열거형참고)
+
+---
+
+## 1. 공통 규칙
+
+### 1.1 성공 응답 형태
+
+대부분의 엔드포인트는 **FastAPI / Pydantic 기본 동작**에 따라, `success` / `data` 래핑 없이 **응답 모델 필드가 곧 JSON 루트 객체**입니다.
+
+**예시 (회원가입 201 응답 본문)**:
+
+```json
+{
+  "user_id": 1,
+  "email": "user@example.com",
+  "created_at": "2026-04-15T10:00:00"
+}
+```
+
+**예시 (비행편 목록 200)**:
+
+```json
+[
+  {
+    "flight_pk": 10,
+    "flight_id": "KE123",
+    "flight_date": "2026-05-01",
+    "flight_type": "departure",
+    "airline": "대한항공",
+    "airport": "나리타",
+    "gate_number": "114",
+    "schedule_date_time": "202605011030",
+    "estimated_date_time": "202605011045",
+    "remark": "출발",
+    "is_active": true
+  }
+]
+```
+
+`POST /flights/{flight_pk}/refresh` 만 객체 형태가 서비스 반환값에 맞춰 고정 필드(`flight_pk`, `changes_detected`, `changes`, `updated_at`)를 사용합니다.
+
+### 1.2 오류 응답 형태
+
+**A) `HTTPException` 및 FastAPI 요청 검증 오류**
+
+```json
+{
+  "detail": "이메일 또는 비밀번호가 올바르지 않습니다."
+}
+```
+
+검증 오류 시 `detail`은 문자열 배열 등 **배열 형태**일 수 있습니다.
+
+**B) 애플리케이션 커스텀 예외** (`flight_alert/exception_handlers.py`)
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "리소스를 찾을 수 없습니다."
+  }
+}
+```
+
+`code` 예: `NOT_FOUND`, `BAD_REQUEST`, `EXTERNAL_API_ERROR`, `INTERNAL_SERVER_ERROR`.
+
+### 1.3 공통 HTTP 상태 코드
+
+| 코드 | 설명 |
+| :--- | :--- |
+| **200 OK** | 조회·수정 성공 |
+| **201 Created** | 리소스 생성 성공 |
+| **204 No Content** | 삭제 등 본문 없는 성공 |
+| **400 Bad Request** | 잘못된 요청 (`BadRequestException` 또는 검증 실패) |
+| **401 Unauthorized** | JWT 누락·무효, 로그인 실패 |
+| **403 Forbidden** | 타인의 비행편 접근 등 |
+| **404 Not Found** | 리소스 없음 (`NotFoundException`, `ValueError` 처리 등) |
+| **409 Conflict** | 이메일 중복(회원가입) |
+| **422 Unprocessable Entity** | Pydantic 필드 검증 실패 |
+| **502 Bad Gateway** | 외부 API 오류 (`APIException`) |
+| **500 Internal Server Error** | 기타 예상치 못한 서버 오류 |
+
+### 1.4 인증이 필요한 API
+
+헤더:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**인증 필요**: `/me`, `POST/GET/PATCH/DELETE /flights...` (아래 `GET /flights/{flight_pk}/logs` 제외).
+
+**인증 불필요**: `/`, `/health`, `/auth/signup`, `/auth/login`, `GET /flights/{flight_pk}/logs`, `GET /notifications...`, `GET|POST /chatbot...`.
+
+### 1.5 CORS
+
+`main.py` 기준 허용 출처: `http://localhost:5173`, `http://127.0.0.1:5173`.
+
+---
+
+## 2. 헬스 (Health)
+
+### 2.1 루트 헬스 체크
+
+**Endpoint**: `GET /`
+
+**설명**: 서비스 가동 여부와 문서 경로 안내.
+
+**Response (200)**:
+
+```json
+{
+  "status": "ok",
+  "message": "ICN Flight Alert API가 실행 중입니다.",
+  "docs": "/docs"
+}
+```
+
+---
+
+### 2.2 헬스 체크 (간단)
+
+**Endpoint**: `GET /health`
+
+**설명**: 최소 형태의 상태 확인.
+
+**Response (200)**:
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+---
+
+## 3. 인증 (Authentication)
+
+### 3.1 회원가입
+
+**Endpoint**: `POST /auth/signup`
+
+**설명**: 이메일·비밀번호로 계정을 생성합니다.
+
+**Request Body**:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "secretpassword"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `email` | string (이메일) | 예 | `EmailStr` |
+| `password` | string | 예 | 평문 (서버에서 bcrypt 해시 저장) |
+
+**Response (201)**: `UserResponse` — `user_id`, `email`, `created_at`.
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 형태 | 메시지 예 | 발생 상황 |
+| :--- | :--- | :--- | :--- |
+| **409** | `{"detail": "..."}` | 이미 등록된 이메일입니다. | 동일 이메일 가입 시도 |
+| **422** | `{"detail": [...]}` | 필드 검증 메시지 | 이메일 형식 오류 등 |
+
+---
+
+### 3.2 로그인
+
+**Endpoint**: `POST /auth/login`
+
+**설명**: 이메일·비밀번호 확인 후 JWT `access_token`을 발급합니다.
+
+**Request Body**:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "secretpassword"
+}
+```
+
+**Response (200)**: `TokenResponse`
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+| 필드 | 설명 |
+| :--- | :--- |
+| `access_token` | JWT 문자열 |
+| `token_type` | 기본값 `bearer` |
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 메시지 예 | 발생 상황 |
+| :--- | :--- | :--- |
+| **401** | 이메일 또는 비밀번호가 올바르지 않습니다. | 사용자 없음 또는 비밀번호 불일치 |
+
+---
+
+## 4. 사용자 (User)
+
+### 4.1 내 정보 조회
+
+**Endpoint**: `GET /me`
+
+**설명**: JWT로 식별된 현재 사용자 정보를 반환합니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200)**: `UserResponse`
+
+```json
+{
+  "user_id": 1,
+  "email": "user@example.com",
+  "created_at": "2026-04-15T10:00:00"
+}
+```
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 토큰 없음·만료·무효 (`OAuth2PasswordBearer` / `get_current_user`) |
+
+---
+
+## 5. 비행편 (Flights)
+
+모든 경로는 라우터 prefix **`/flights`** 입니다.  
+`{flight_pk}` 는 정수 PK입니다.
+
+---
+
+### 5.1 비행편 등록
+
+**Endpoint**: `POST /flights`
+
+**설명**: 편명·날짜·출발/도착 타입으로 등록합니다. 인천공항 OpenAPI로 실제 편을 조회한 뒤 DB에 저장합니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**: `FlightCreate`
+
+```json
+{
+  "flight_id": "KE123",
+  "flight_date": "2026-05-01",
+  "flight_type": "departure"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `flight_id` | string | 예 | 2~10자 (예: `KE123`) |
+| `flight_date` | string (date) | 예 | `YYYY-MM-DD` |
+| `flight_type` | string | 예 | `departure` \| `arrival` |
+
+**Response (201)**: `FlightResponse` (비행편 상세 필드 전체. `user_id`·`user_email`은 로그인 사용자 기준으로 설정됨).
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 미인증 |
+| **400 / 404 / 502** | 공항 API 조회 실패 등 (서비스·외부 API에 따라 상이) |
+
+---
+
+### 5.2 내 비행편 목록 조회
+
+**Endpoint**: `GET /flights`
+
+**설명**: 로그인 사용자 소유 비행편만 조회합니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters**:
+
+| 이름 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `is_active` | boolean | 아니오 | `true` / `false` 로 모니터링 활성 여부 필터 |
+
+**Response (200)**: `FlightListResponse[]` (배열 JSON).
+
+---
+
+### 5.3 비행편 상세 조회
+
+**Endpoint**: `GET /flights/{flight_pk}`
+
+**설명**: 단일 비행편 상세. **본인 소유만** 허용.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `flight_pk` | integer | 예 | 비행편 PK |
+
+**Response (200)**: `FlightResponse`.
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | `detail` 예 | 발생 상황 |
+| :--- | :--- | :--- |
+| **403** | 본인의 비행편만 조회할 수 있습니다. | 다른 사용자의 `flight_pk` |
+| **404** | (NotFound 등) | 존재하지 않는 PK |
+
+---
+
+### 5.4 비행편 삭제
+
+**Endpoint**: `DELETE /flights/{flight_pk}`
+
+**설명**: 비행편 삭제. 관련 **상태 로그·알림은 DB CASCADE** 로 함께 삭제됩니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `flight_pk` | integer | 예 | 비행편 PK |
+
+**Response (204)**: 본문 없음.
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **403** | 타인 비행편 |
+| **404** | 없는 PK |
+
+---
+
+### 5.5 비행편 활성화 상태 변경
+
+**Endpoint**: `PATCH /flights/{flight_pk}/status`
+
+**설명**: 스케줄러 모니터링 on/off (`is_active`).
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 |
+| :--- | :--- | :--- |
+| `flight_pk` | integer | 예 |
+
+**Request Body**: `FlightUpdateStatus`
+
+```json
+{
+  "is_active": false
+}
+```
+
+**Response (200)**: `FlightResponse`.
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **403** | 타인 비행편 |
+
+---
+
+### 5.6 비행편 수동 갱신
+
+**Endpoint**: `POST /flights/{flight_pk}/refresh`
+
+**설명**: 인천공항 API로 즉시 갱신하고, 게이트·터미널·지연·상태(결항 시 알림) 등 변경을 감지해 로그·알림·메일을 처리합니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 |
+| :--- | :--- | :--- |
+| `flight_pk` | integer | 예 |
+
+**Response (200)** (본문은 서비스에서 반환하는 `dict`):
+
+```json
+{
+  "flight_pk": 10,
+  "changes_detected": true,
+  "changes": [
+    {
+      "field": "gate_number",
+      "old_value": "109",
+      "new_value": "114",
+      "change_type": "gate_change"
+    }
+  ],
+  "updated_at": "2026-04-15T12:00:00"
+}
+```
+
+| 필드 | 설명 |
+| :--- | :--- |
+| `changes_detected` | 변경 1건 이상 여부 |
+| `changes` | 변경 메타 배열 (`field`, `old_value`, `new_value`, `change_type`) |
+| `updated_at` | 갱신 시각 (`last_checked_at`) |
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **403** | 타인 비행편 |
+
+---
+
+### 5.7 비행편 상태 변경 이력 조회
+
+**Endpoint**: `GET /flights/{flight_pk}/logs`
+
+**설명**: 해당 비행편의 `FlightStatusLog` 목록. **JWT 없이 호출 가능** (라우터에 인증 의존성 없음).
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 |
+| :--- | :--- | :--- |
+| `flight_pk` | integer | 예 |
+
+**Query Parameters**:
+
+| 이름 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `change_type` | string | 아니오 | `gate_change`, `delay`, `status_change`, `terminal_change` 중 하나로 필터 |
+
+**Response (200)**: `FlightStatusLogResponse[]`.
+
+```json
+[
+  {
+    "log_id": 1,
+    "flight_pk": 10,
+    "schedule_date_time": "202605011030",
+    "estimated_date_time": "202605011045",
+    "terminal_id": "P01",
+    "gate_number": "114",
+    "remark": "출발",
+    "carousel": null,
+    "change_type": "gate_change",
+    "detected_at": "2026-04-15T12:00:00"
+  }
+]
+```
+
+---
+
+## 6. 알림 (Notifications)
+
+라우터 prefix: **`/notifications`**.
+
+---
+
+### 6.1 비행편별 알림 목록
+
+**Endpoint**: `GET /notifications/flights/{flight_pk}`
+
+**설명**: 해당 `flight_pk`에 연결된 알림 이력을 조회합니다.
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 |
+| :--- | :--- | :--- |
+| `flight_pk` | integer | 예 |
+
+**Response (200)**: `NotificationListResponse[]`.
+
+```json
+[
+  {
+    "notification_id": 1,
+    "flight_pk": 10,
+    "notification_type": "gate_change",
+    "message": "게이트가 109에서 114로 변경되었습니다",
+    "sent_at": "2026-04-15T12:00:00",
+    "is_sent": true
+  }
+]
+```
+
+---
+
+### 6.2 사용자 이메일 기준 알림 목록
+
+**Endpoint**: `GET /notifications`
+
+**설명**: 해당 이메일 사용자가 등록한 비행편들에 대한 알림을 모읍니다.
+
+**Query Parameters**:
+
+| 이름 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `user_email` | string | **예** | 조회할 사용자 이메일 |
+| `notification_type` | string | 아니오 | `delay`, `gate_change`, `cancel`, `terminal_change` |
+
+**Response (200)**: `NotificationResponse[]`.
+
+```json
+[
+  {
+    "notification_id": 1,
+    "flight_pk": 10,
+    "notification_type": "gate_change",
+    "message": "게이트가 109에서 114로 변경되었습니다",
+    "sent_to": "user@example.com",
+    "sent_at": "2026-04-15T12:00:00",
+    "is_sent": true,
+    "error_message": null
+  }
+]
+```
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **422** | `user_email` 쿼리 누락 (`Query(...)`) |
+
+---
+
+## 7. 챗봇 (Chatbot)
+
+라우터 prefix: **`/chatbot`**.
+
+---
+
+### 7.1 챗봇 대화
+
+**Endpoint**: `POST /chatbot/chat`
+
+**설명**: 공항 안내 대화. RAG/에이전트 설정에 따라 `mode`, `sources`가 채워집니다.
+
+**Request Body**:
+
+```json
+{
+  "message": "3시간 기다려야 하는데 뭐하면 좋을까요?",
+  "terminal": "T1",
+  "wait_time_hours": 3
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+| :--- | :--- | :--- | :--- |
+| `message` | string | 예 | 사용자 질문 |
+| `terminal` | string | 아니오 | 기본 `T1` |
+| `wait_time_hours` | number | 아니오 | 대기 시간(시간) |
+
+**Response (200)**:
+
+```json
+{
+  "message": "3시간 기다려야 하는데 뭐하면 좋을까요?",
+  "response": "…답변 본문…",
+  "mode": "agent",
+  "sources": [
+    {
+      "doc_id": "…",
+      "title": "…",
+      "source_url": "https://…"
+    }
+  ]
+}
+```
+
+| 필드 | 설명 |
+| :--- | :--- |
+| `mode` | `legacy` \| `rag` \| `agent` 등 (구현 기준) |
+| `sources` | 근거 문서 메타 배열 (없으면 빈 배열) |
+
+---
+
+### 7.2 챗봇 서비스 정보
+
+**Endpoint**: `GET /chatbot`
+
+**설명**: 서비스 소개, 기능 목록, RAG 관련 **환경 변수 키** 안내 JSON을 반환합니다.
+
+**Response (200)**: 고정 구조 객체 (`service`, `description`, `features`, `env` 등). 상세 키는 구현(`chatbot_router.py`) 기준으로 변할 수 있으므로 운영 시 실제 응답 또는 `/docs` 스키마를 참고하세요.
+
+---
+
+## 8. 부록: 열거형·참고
+
+### 비행편 타입 (`flight_type`)
+
+- `departure`: 출발
+- `arrival`: 도착
+
+### 알림 타입 (`notification_type`)
+
+- `delay`
+- `gate_change`
+- `cancel`
+- `terminal_change`
+
+### 상태 로그 필터 (`change_type`, 로그 조회)
+
+- `gate_change`
+- `delay`
+- `status_change`
+- `terminal_change`
+
+### 기타
+
+- **JWT**: `JWT_SECRET_KEY`, `JWT_ALGORITHM`(기본 `HS256`), `JWT_EXPIRE_MINUTES`(기본 `30`) — `.env` 참고.
+- **스케줄러**: 앱 기동 시 비행편 주기 갱신(기본 10분) — `main.py` `lifespan`.
+- **RAG 문서**: 테이블 `airport_documents`, `VECTOR_BACKEND`, `CHROMA_*` 등은 `README.md` 및 `GET /chatbot` 의 `env` 설명 참고.
