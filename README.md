@@ -1,40 +1,53 @@
 # ✈️ ICN Flight Alert - 인천공항 비행편 실시간 알림 시스템
 
-인천공항을 이용하는 여행객들의 편리한 여행을 위해 설계된 **FastAPI 기반의 비행편 실시간 모니터링 및 알림 서비스**입니다. 비행편 변경 사항을 자동으로 감지하고 이메일로 알려주며, AI 챗봇을 통해 공항 대기 시간 동안 유용한 정보를 제공합니다.
+인천공항을 이용하는 여행객들의 편리한 여행을 위한 **FastAPI 기반 비행편 실시간 모니터링 및 알림 서비스**입니다.
 
-### 최근 업데이트 요약
+비행편 변경 사항을 자동으로 감지하고 이메일로 알려주며, RAG 기반 AI 챗봇을 통해 공항 대기 시간 동안 유용한 정보를 제공합니다.
 
-* **Flight Router**: 모든 비행편 API에 `get_current_user` 적용(로그인 필수). 등록 시 `user_id`·`user_email`은 토큰의 사용자로 자동 연동. 상세/삭제/상태 변경/수동 갱신은 `flight.user_id`와 비교해 본인만 허용, 타인 접근 시 **403 Forbidden**. `GET /flights`는 쿼리 `is_active`로 활성·비활성 필터 가능. **고정 경로**(`POST ""`, `GET ""`)를 **동적 경로**(`/{flight_pk}` …)보다 위에 두어 라우팅 오동작을 방지.
-* **Chatbot Router**: 서비스 소개 **`GET /chatbot`**, 대화 **`POST /chatbot/chat`** (JWT 불필요). 응답에 **`mode`**(`legacy` \| `rag` \| `agent`), **`sources`**(근거 문서 `doc_id`·`title`·`source_url`) 포함.
-* **RAG / Agentic**: 인천공항 공식 페이지 크롤·파싱 후 OpenAI `text-embedding-3-small` 임베딩. 문서가 있으면 기본적으로 **도구 호출 에이전트**(벡터·키워드·카테고리 조회)로 답변, 없으면 레거시 LLM 안내.
-* **벡터 저장소**: 기본은 PostgreSQL **`airport_documents.embedding`**(`double precision[]`) + 앱 내 코사인 검색(pgvector 확장 불필요). **`VECTOR_BACKEND=chroma`** 시 동일 API로 **ChromaDB** 영속 저장(로컬 `.chroma_airport` 등).
-* **인덱싱 스크립트**: `scripts/crawl_and_index.py`가 기동 시 없는 테이블을 `create_all`로 생성 후 크롤·임베딩 적재. 선택적으로 `scripts/apply_airport_indexes.py` 및 `scripts/sql/airport_documents_vector_index.sql`(B-tree·`pg_trgm` 등, 벡터 인덱스는 pgvector 설치 시에만 해당).
-* **CORS**: Vite 기본 개발 서버(`http://localhost:5173`, `http://127.0.0.1:5173`) 및 `Authorization` 헤더 허용으로 별도 프론트엔드 저장소와 연동 가능.
+---
+
+## 📚 Table of Contents
+
+- [Tech Stack](#-tech-stack)
+- [Database Structure](#-database-structure)
+- [Key Features](#-key-features)
+- [Architecture & Design Patterns](#-architecture--design-patterns)
+- [Business Logic Location](#-business-logic-location)
+- [API Documentation](#-api-documentation)
+- [Getting Started](#️-getting-started)
+- [RAG System Setup](#-rag-system-setup)
+- [Troubleshooting](#-troubleshooting)
+- [Future Roadmap](#-future-roadmap)
+- [Retrospective](#-retrospective)
 
 ---
 
 ## 🛠 Tech Stack
 
-* **Framework**: `FastAPI` (Asynchronous API Support)
-* **Database**: `PostgreSQL`
-* **ORM**: `SQLAlchemy 2.0`
-* **Authentication**: `JWT (JSON Web Token)`, `bcrypt`
-* **External API**: 인천국제공항 공공데이터 OpenAPI
-* **Email Service**: `Gmail SMTP`
-* **AI Service**: `OpenAI` (GPT-4o-mini, `text-embedding-3-small` 임베딩)
-* **RAG 저장소**: PostgreSQL 배열 임베딩 또는 선택 **`ChromaDB`** (`chromadb`)
-* **크롤링**: `httpx`, `BeautifulSoup4`, `lxml`
-* **Scheduler**: `APScheduler` (10분 주기 자동 갱신)
-* **Dependency Management**: `uv`
-* **Environment**: `python-dotenv`
+| Category | Technology |
+|----------|-----------|
+| **Framework** | FastAPI (Asynchronous API Support) |
+| **Database** | PostgreSQL |
+| **ORM** | SQLAlchemy 2.0 |
+| **Authentication** | JWT (JSON Web Token), bcrypt |
+| **External API** | 인천국제공항 공공데이터 OpenAPI |
+| **Email Service** | Gmail SMTP |
+| **AI Service** | OpenAI (GPT-4o-mini, text-embedding-3-small) |
+| **Vector Store** | PostgreSQL 배열 임베딩 / ChromaDB (선택) |
+| **Crawling** | httpx, BeautifulSoup4, lxml |
+| **Scheduler** | APScheduler (10분 주기 자동 갱신) |
+| **Dependency Management** | uv |
+| **Environment** | python-dotenv |
 
 ---
 
-## 🏗 Database Structure (ERD)
-
-데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다. RAG용 **`AirportDocument`**(`airport_documents`) 테이블은 비행편 도메인과 독립적이며, **`VECTOR_BACKEND=postgres`(기본)** 일 때만 PostgreSQL에 행이 쌓입니다(Chroma 전용 모드에서는 테이블은 비어 있어도 무방).
+## 🏗 Database Structure
 
 ![ERD](https://github.com/user-attachments/assets/2b533b1a-9c20-4ffc-9b8b-e2f316af8ec7)
+
+데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다.
+
+RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운영되며, `VECTOR_BACKEND=postgres`(기본) 모드에서만 사용됩니다.
 
 ---
 
@@ -48,13 +61,14 @@
 
 ### 📅 Advanced Flight Monitoring System
 
-사용자 편의와 정확한 알림을 위해 **실시간 모니터링**과 **자동 감지** 로직을 적용했습니다.
+실시간 모니터링과 자동 감지 로직을 통해 사용자 편의성과 정확한 알림을 제공합니다.
 
 * **실시간 API 연동**: 인천공항 공공데이터 OpenAPI를 통한 실제 비행편 정보 조회
 * **자동 데이터 채우기**: 비행편 등록 시 항공사, 공항, 게이트, 터미널 등 자동 입력
 * **스케줄러**: APScheduler를 통해 10분마다 활성 비행편 자동 갱신
 * **변경 감지**: 게이트 변경, 터미널 변경, 지연, 결항을 자동으로 감지
 * **상태 관리**: 활성화/비활성화 상태로 모니터링 on/off 제어 가능
+* **권한 검증**: 모든 비행편 API에 JWT 인증 적용 및 본인 확인 로직
 
 ### 📧 Email Notification System
 
@@ -64,13 +78,16 @@
 * **전송 이력**: 모든 알림의 전송 성공/실패 여부 기록
 * **Gmail SMTP**: Gmail 앱 비밀번호를 통한 안전한 이메일 발송
 
-### 🤖 AI-Powered Airport Assistant
+### 🤖 RAG-Powered AI Airport Assistant
 
-* **OpenAI 연동**: GPT-4o-mini 답변, `text-embedding-3-small` 임베딩
-* **RAG**: 인천공항 공식 사이트 기반 문서 인덱싱 후 검색·답변(문서 0건 시 레거시 모드)
-* **Agentic RAG**(기본): `search_airport_docs`, `search_airport_docs_keyword`, `list_airport_doc_categories`, `get_airport_document` 도구 루프
-* **맞춤 추천**: 대기 시간(`wait_time_hours`, `float` 가능)과 터미널을 프롬프트에 반영
-* **API**: `GET /chatbot`(소개·지원 env), `POST /chatbot/chat` 바디 `{ "message", "terminal?", "wait_time_hours?" }` — 응답 `{ "message", "response", "mode", "sources" }`
+인천공항 공식 웹사이트 정보를 기반으로 정확한 안내를 제공합니다.
+
+* **OpenAI 연동**: GPT-4o-mini 답변, text-embedding-3-small 임베딩
+* **Agentic RAG**: 도구 호출 기반 검색 (`search_airport_docs`, `search_airport_docs_keyword`, `list_airport_doc_categories`, `get_airport_document`)
+* **문서 인덱싱**: 인천공항 공식 사이트 크롤링 및 파싱 후 벡터 DB 저장
+* **맞춤 추천**: 대기 시간(`wait_time_hours`)과 터미널 정보를 고려한 개인화된 답변
+* **유연한 벡터 저장소**: PostgreSQL 배열 또는 ChromaDB 선택 가능 (`VECTOR_BACKEND` 설정)
+* **API**: `GET /chatbot` (소개), `POST /chatbot/chat` (대화) - 응답에 `mode`, `sources` 포함
 
 ### 📊 Comprehensive Logging System
 
@@ -118,7 +135,7 @@
 │  - chatbot_service.py                   │
 │  - embedding_service.py                 │
 │  - crawler_service.py                   │
-│  - document_parser_service.py          │
+│  - document_parser_service.py           │
 │  - scheduler_service.py                 │
 └─────────────────────────────────────────┘
               ↓
@@ -153,10 +170,11 @@
 * **외부 API 에러 처리**: 인천공항 API 호출 실패 시에도 기본 정보로 등록 가능
 * **Scheduler 안정성**: 에러 발생 시에도 다음 주기에 정상 작동
 * **이메일 재시도**: 전송 실패 시 is_sent=False로 기록하여 재시도 가능
+* **라우팅 최적화**: 고정 경로를 동적 경로보다 우선 배치하여 경로 충돌 방지
 
 ---
 
-## 🛡 Business Logic & Location
+## 🛡 Business Logic Location
 
 ### 인증 관련
 
@@ -173,11 +191,12 @@
 |---|---|---|
 | 본인 비행편만 접근 | `flight_router` 각 엔드포인트 | user_id 검증 (403) |
 | 비행편 정보 자동 채우기 | `flight_service.create_flight` | IncheonAPIService 연동 |
-| 라우트 정의 순서 | `flight_router.py` 상단 주석 | `POST/GET ""` 고정 경로를 `/{flight_pk}` 동적 경로보다 위에 배치 |
+| 라우트 정의 순서 | `flight_router.py` 상단 주석 | 고정 경로를 동적 경로보다 위에 배치 |
 | 변경 사항 자동 감지 | `flight_service.refresh_flight` | 게이트/터미널/시간/비고 비교 |
 | FlightStatusLog 자동 생성 | `flight_service.refresh_flight` | 변경 감지 시 자동 저장 |
 | Notification 자동 생성 | `flight_service.refresh_flight` | 변경 감지 시 자동 저장 |
 | 이메일 자동 발송 | `flight_service.refresh_flight` | EmailService 호출 |
+| 사용자 정보 자동 연동 | `flight_router.create_flight` | JWT 토큰에서 user_id·user_email 추출 |
 
 ### 스케줄러 관련
 
@@ -194,18 +213,28 @@
 | 알림 타입별 필터링 | `notification_service.read_notifications` | notification_type 필터 |
 | 전송 성공/실패 기록 | `email_service.send_notification_email` | is_sent boolean 플래그 |
 
+### RAG 챗봇 관련
+
+| 비즈니스 로직 | 구현 위치 | 방어 방식 |
+|---|---|---|
+| 문서 인덱싱 | `scripts/crawl_and_index.py` | 크롤링 + 파싱 + 임베딩 저장 |
+| 벡터 검색 (코사인) | `vector_repository.py` | PostgreSQL 배열 또는 Chroma |
+| 키워드 검색 | `vector_repository.py` | PostgreSQL ILIKE 또는 Chroma 메타데이터 |
+| 에이전트 도구 호출 | `rag/agent/tools.py` | OpenAI function calling |
+| 모드 분기 | `chatbot_service.py` | 문서 존재 여부로 agent/rag/legacy 결정 |
+
 ---
 
 ## 📖 API Documentation
+
+![API](https://github.com/user-attachments/assets/518b856d-0f56-4b29-aae3-2cfecce1f78b)
 
 모든 API 명세는 Swagger UI를 통해 시각적으로 확인하고 테스트할 수 있습니다.
 
 * **Docs 주소**: `http://localhost:8000/docs`
 * **간단 명세**: [API.md](./API.md)
 
-![API](https://github.com/user-attachments/assets/518b856d-0f56-4b29-aae3-2cfecce1f78b)
-
-### 엔드포인트 요약 (인증·권한)
+### 엔드포인트 요약
 
 | Method | Path | JWT 필요 | 비고 |
 |--------|------|:--------:|------|
@@ -221,73 +250,18 @@
 | `GET` | `/flights/{flight_pk}/logs` |  | 변경 이력, `change_type` 선택 필터 |
 | `GET` | `/notifications` |  | `user_email` 쿼리 필수 |
 | `GET` | `/notifications/flights/{flight_pk}` |  | 해당 비행편 알림 목록 |
-| `GET` | `/chatbot` |  | 소개·환경 변수 안내 (끝 `/` 없음) |
+| `GET` | `/chatbot` |  | 소개·환경 변수 안내 |
 | `POST` | `/chatbot/chat` |  | 챗봇; 응답 `mode`, `sources` 포함 |
 
-프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 붙이면 됩니다.
+프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 포함해야 합니다.
 
 ### 프론트엔드 연동 (CORS)
 
-`main.py`의 `CORSMiddleware`에서 **`http://localhost:5173`**, **`http://127.0.0.1:5173`** 을 허용합니다. 별도 저장소(예: Vite + React 기반 `icn-flight-alert-frontend`)를 로컬에서 띄울 때 동일 설정을 유지하세요. 운영 도메인을 쓰는 경우 `origins` 리스트에 URL을 추가해야 합니다.
+`main.py`의 `CORSMiddleware`에서 **`http://localhost:5173`**, **`http://127.0.0.1:5173`** 을 허용합니다. 
+
+별도 저장소(예: Vite + React 기반 `icn-flight-alert-frontend`)를 로컬에서 띄울 때 동일 설정을 유지하세요.
 
 ---
-
-## 🚨 Troubleshooting
-
-### 1. Flight 모델에 user_id 컬럼 추가 후 기존 데이터 문제
-
-* **문제**: `user_id` 컬럼을 NOT NULL로 추가했는데 기존 flights 테이블에 데이터가 있어서 마이그레이션 실패
-* **해결**: VSCode PostgreSQL 익스텐션에서 flights 테이블 우클릭 → "Drop Table" 또는 SQL로 `DROP TABLE IF EXISTS flights CASCADE;` 실행 후 서버 재시작하여 테이블 재생성
-
-### 2. FlightCreate 스키마에서 user_email 제거 후 호환성 문제
-
-* **문제**: 기존 API 테스트 코드나 Postman 요청에 `user_email` 필드가 포함되어 있어 `422 Validation Error` 발생
-* **해결**: FlightCreate 스키마에서 `user_email` 제거하고, 로그인한 사용자의 `current_user.email`과 `current_user.user_id`를 서비스 레이어에서 자동으로 설정하도록 변경
-
-### 3. 본인 확인 로직에서 반복되는 코드
-
-* **문제**: `GET /flights/{id}`, `DELETE /flights/{id}`, `PATCH /flights/{id}/status` 등 여러 엔드포인트에서 동일한 본인 확인 로직 반복
-* **해결**: 각 엔드포인트에서 `flight_service.read_flight_by_id()`로 비행편 조회 후 `flight.user_id != current_user.user_id` 체크하여 403 Forbidden 반환
-
-### 4. 비행편 등록 시 인천공항 API 호출 실패 대응
-
-* **설계 결정**: 인천공항 API 호출이 실패하더라도 사용자가 입력한 기본 정보(flight_id, flight_date, flight_type)로 비행편 등록을 허용하여 사용자 경험 개선
-* **구현 위치**: `flight_alert/services/flight_service.py`의 `create_flight()` 메서드
-  ```python
-  # API 호출 실패 시 기본 정보만 저장
-  if not api_data:
-      logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")
-      flight = Flight(
-          user_id=user_id,
-          user_email=user_email,
-          flight_id=flight_data.flight_id,
-          flight_date=flight_data.flight_date,
-          flight_type=flight_data.flight_type.value,
-          is_active=True,
-      )
-  ```
-* **로그 확인**: `logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")` 로그로 API 실패 여부 확인 가능
-
-### 5. 챗봇 정보 API 경로(슬래시) 혼선
-
-* **문제**: 클라이언트가 `GET /chatbot/`만 호출하거나, 반대로 서버만 끝 슬래시 경로를 열어둔 경우 404 또는 리다이렉트가 발생할 수 있음
-* **해결**: 서비스 소개는 **`GET /chatbot`**(슬래시 없음)을 사용. `flight_alert/routers/chatbot_router.py`에서 루트 경로는 `@router.get("")`로 정의되어 `/chatbot`에 매핑됨
-
-### 6. RAG가 동작하지 않고 항상 `mode: legacy`
-
-* **원인**: `airport_documents`에 행이 없거나(또는 Chroma에 컬렉션이 비어 있음), `RAG_ENABLED=false`
-* **해결**: `uv run python scripts/crawl_and_index.py --facilities` 또는 `--all`로 인덱싱. Chroma 사용 시 `.env`에 `VECTOR_BACKEND=chroma` 후 동일 스크립트 실행
-
-### 7. 크롤 스크립트에서 `airport_documents` 테이블 없음
-
-* **해결**: 스크립트가 시작 시 `Base.metadata.create_all`을 호출하므로 `DATABASE_URL`만 맞으면 테이블 생성됨. 이후 다시 크롤 실행
-
-### 8. Windows에서 Chroma / 의존성
-
-* **Chroma**: `VECTOR_BACKEND=chroma`일 때 `CHROMA_PERSIST_DIR`로 저장 경로 지정 가능(기본 프로젝트 루트 `.chroma_airport`, `.gitignore`에 등록됨)
-
----
-
 
 ## ⚙️ Getting Started
 
@@ -310,8 +284,9 @@ createdb flight_alert
 uv run python scripts/crawl_and_index.py --facilities
 # 또는: uv run python scripts/crawl_and_index.py --all
 
-# 6. (선택) PostgreSQL에 검색 보조 인덱스 — scripts/sql/airport_documents_vector_index.sql
-#    또는: uv run python scripts/apply_airport_indexes.py
+# 6. (선택) PostgreSQL에 검색 보조 인덱스
+# scripts/sql/airport_documents_vector_index.sql
+# 또는: uv run python scripts/apply_airport_indexes.py
 
 # 7. 서버 실행
 uv run fastapi dev main.py
@@ -348,17 +323,89 @@ RAG_TOP_K=5
 RAG_AGENT_MODEL=gpt-4o-mini
 RAG_AGENT_MAX_ROUNDS=5
 
-# 벡터 백엔드: postgres(기본, airport_documents 테이블) | chroma
+# 벡터 백엔드: postgres(기본) | chroma
 VECTOR_BACKEND=postgres
 # CHROMA_PERSIST_DIR=.chroma_airport
 # CHROMA_COLLECTION=airport_documents
 ```
 
+---
+
+## 🔍 RAG System Setup
+
+### 문서 인덱싱
+
+인천공항 공식 웹사이트 정보를 크롤링하고 벡터 DB에 저장합니다.
+
+```bash
+# 편의시설 정보만 인덱싱
+uv run python scripts/crawl_and_index.py --facilities
+
+# 모든 정보 인덱싱
+uv run python scripts/crawl_and_index.py --all
+```
+
 ### RAG 동작 확인
 
-1. 위 **인덱싱 스크립트**를 한 번 이상 실행해 문서를 적재합니다.
-2. 서버 기동 후 **`http://localhost:8000/docs`**에서 **`POST /chatbot/chat`**에 `{ "message": "1터미널 환전 어디 있어?", "terminal": "T1" }` 등을 보냅니다.
-3. 응답 **`mode`**가 `agent`(기본 에이전트) 또는 `rag`이고 **`sources`**에 `doc_id`·`title`이 채워지면 RAG가 동작한 것입니다. 문서가 없으면 `legacy`입니다. 프론트엔드는 필수는 아닙니다.
+1. 위 인덱싱 스크립트를 한 번 이상 실행해 문서를 적재합니다.
+2. 서버 기동 후 `http://localhost:8000/docs`에서 `POST /chatbot/chat` 호출
+3. 요청: `{ "message": "1터미널 환전 어디 있어?", "terminal": "T1" }`
+4. 응답의 `mode`가 `agent` 또는 `rag`이고 `sources`에 문서 정보가 있으면 성공
+
+### 벡터 저장소 선택
+
+**PostgreSQL (기본)**
+- `.env`에 `VECTOR_BACKEND=postgres` 설정
+- `airport_documents` 테이블에 임베딩 배열 저장
+- pgvector 확장 불필요 (애플리케이션 레벨 코사인 검색)
+
+**ChromaDB (선택)**
+- `.env`에 `VECTOR_BACKEND=chroma` 설정
+- 로컬 디렉토리(`.chroma_airport`)에 영속 저장
+- 동일한 RAG API 사용
+
+---
+
+## 🚨 Troubleshooting
+
+### 1. Flight 모델에 user_id 컬럼 추가 후 기존 데이터 문제
+
+* **문제**: `user_id` 컬럼을 NOT NULL로 추가했는데 기존 flights 테이블에 데이터가 있어서 마이그레이션 실패
+* **해결**: `DROP TABLE IF EXISTS flights CASCADE;` 실행 후 서버 재시작하여 테이블 재생성
+
+### 2. FlightCreate 스키마에서 user_email 제거 후 호환성 문제
+
+* **문제**: 기존 API 테스트에 `user_email` 필드가 포함되어 `422 Validation Error` 발생
+* **해결**: FlightCreate 스키마에서 `user_email` 제거하고, 로그인한 사용자의 정보를 서비스 레이어에서 자동 설정
+
+### 3. 본인 확인 로직에서 반복되는 코드
+
+* **문제**: 여러 엔드포인트에서 동일한 본인 확인 로직 반복
+* **해결**: 각 엔드포인트에서 `flight_service.read_flight_by_id()` 조회 후 `flight.user_id != current_user.user_id` 체크
+
+### 4. 비행편 등록 시 인천공항 API 호출 실패 대응
+
+* **설계 결정**: API 호출 실패 시에도 기본 정보로 비행편 등록 허용하여 사용자 경험 개선
+* **구현**: `flight_service.create_flight()`에서 API 실패 시 기본 정보만 저장
+
+### 5. 챗봇 정보 API 경로 혼선
+
+* **문제**: 클라이언트가 `GET /chatbot/`만 호출하여 404 발생
+* **해결**: 서비스 소개는 `GET /chatbot` (슬래시 없음) 사용
+
+### 6. RAG가 동작하지 않고 항상 `mode: legacy`
+
+* **원인**: `airport_documents`에 행이 없거나 `RAG_ENABLED=false`
+* **해결**: `uv run python scripts/crawl_and_index.py --facilities` 또는 `--all`로 인덱싱
+
+### 7. 크롤 스크립트에서 `airport_documents` 테이블 없음
+
+* **해결**: 스크립트가 시작 시 `Base.metadata.create_all`을 호출하므로 `DATABASE_URL`만 맞으면 테이블 생성됨
+
+### 8. Windows에서 Chroma 사용 시
+
+* **Chroma**: `VECTOR_BACKEND=chroma`일 때 `CHROMA_PERSIST_DIR`로 저장 경로 지정 가능
+* **기본 경로**: 프로젝트 루트 `.chroma_airport` (`.gitignore`에 등록됨)
 
 ---
 
@@ -370,11 +417,11 @@ VECTOR_BACKEND=postgres
 * [x] **Email Notification**: Gmail SMTP를 통한 이메일 알림
 * [x] **APScheduler**: 10분 주기 자동 갱신
 * [x] **AI Chatbot**: OpenAI 기반 공항 안내 챗봇
+* [x] **RAG / Agentic Chatbot**: 공항 공식 정보 크롤·임베딩·도구 호출 기반 챗봇
 * [x] **Exception Handling**: 커스텀 예외 및 전역 핸들러
-* [x] **Frontend (별도 저장소)**: Vite + React 클라이언트와 CORS·JWT 연동 가능 (`icn-flight-alert-frontend` 등)
+* [x] **Frontend (별도 저장소)**: Vite + React 클라이언트 연동
 * [ ] **Push Notification**: Firebase Cloud Messaging 연동
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
-* [x] **RAG / Agentic Chatbot**: 공항 공식 정보 크롤·임베딩·도구 호출 기반 챗봇(Chroma 또는 PostgreSQL 배열)
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
 * [ ] **Test Automation**: Pytest를 이용한 유닛 테스트
 
@@ -382,11 +429,13 @@ VECTOR_BACKEND=postgres
 
 ## 📝 Retrospective
 
-인천공항 공공데이터 OpenAPI를 활용하여 **실시간 비행편 모니터링 시스템**을 구축하는 과정에서 **외부 API 연동**, **스케줄러 구현**, **이메일 알림 시스템** 등 실무에서 자주 사용되는 기술들을 경험할 수 있었습니다. 특히 FastAPI의 **의존성 주입(Dependency Injection)** 을 활용한 인증 시스템 구현과 **계층화된 아키텍처(Layered Architecture)** 설계를 통해 유지보수가 용이한 백엔드 시스템의 필요성을 체감했습니다. 
+인천공항 공공데이터 OpenAPI를 활용하여 **실시간 비행편 모니터링 시스템**을 구축하는 과정에서 **외부 API 연동**, **스케줄러 구현**, **이메일 알림 시스템** 등 실무에서 자주 사용되는 기술들을 경험할 수 있었습니다.
 
-또한 **APScheduler**를 통한 주기적인 백그라운드 작업 처리와 **트랜잭션 관리**를 통한 데이터 무결성 보장의 중요성을 깊이 이해하게 되었습니다. 인천공항 API의 응답 형식을 파싱하고, 변경 사항을 감지하여 자동으로 알림을 생성하는 로직을 구현하며 **복잡한 비즈니스 로직을 체계적으로 설계**하는 능력을 기를 수 있었습니다.
+특히 FastAPI의 **의존성 주입(Dependency Injection)**을 활용한 인증 시스템 구현과 **계층화된 아키텍처(Layered Architecture)** 설계를 통해 유지보수가 용이한 백엔드 시스템의 필요성을 체감했습니다.
 
-마지막으로 OpenAI GPT-4o-mini와 **RAG·에이전틱 도구 호출**을 결합해 인덱싱된 공항 정보를 근거로 답하도록 확장하였으며, PostgreSQL 또는 **ChromaDB**로 벡터 저장소를 선택할 수 있게 하여 로컬 개발·배포 환경에 맞게 조정할 수 있습니다.
+**APScheduler**를 통한 주기적인 백그라운드 작업 처리와 **트랜잭션 관리**를 통한 데이터 무결성 보장의 중요성을 깊이 이해하게 되었으며, 인천공항 API의 응답 형식을 파싱하고 변경 사항을 감지하여 자동으로 알림을 생성하는 로직을 구현하며 **복잡한 비즈니스 로직을 체계적으로 설계**하는 능력을 기를 수 있었습니다.
+
+마지막으로 OpenAI GPT-4o-mini와 **RAG·에이전틱 도구 호출**을 결합해 인덱싱된 공항 정보를 근거로 답변하도록 확장하였으며, PostgreSQL 또는 **ChromaDB**로 벡터 저장소를 선택할 수 있게 하여 로컬 개발·배포 환경에 맞게 조정할 수 있도록 설계했습니다.
 
 ---
 
