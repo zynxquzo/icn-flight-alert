@@ -3,6 +3,7 @@
 import logging
 from sqlalchemy.orm import Session
 
+from flight_alert.exceptions import NotFoundException
 from flight_alert.repositories.flight_status_log_repository import flight_status_log_repository
 from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.schemas.flight_status_log import FlightStatusLogResponse
@@ -21,7 +22,7 @@ class FlightStatusLogService:
         # 비행편 존재 확인
         flight = flight_repository.find_by_id(db, flight_pk)
         if not flight:
-            raise ValueError(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
+            raise NotFoundException(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
         
         logs = flight_status_log_repository.find_by_flight_pk(db, flight_pk, change_type)
         

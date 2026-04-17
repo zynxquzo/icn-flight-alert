@@ -6,7 +6,12 @@ Exception Handlers
 
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
-from flight_alert.exceptions import NotFoundException, BadRequestException, APIException
+from flight_alert.exceptions import (
+    NotFoundException,
+    BadRequestException,
+    APIException,
+    UnauthorizedException,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,20 +64,20 @@ def register_exception_handlers(app):
                 }
             }
         )
-    
-    @app.exception_handler(ValueError)
-    async def value_error_handler(request: Request, exc: ValueError):
-        """ValueError를 404로 처리"""
-        logger.warning(f"ValueError: {str(exc)}")
+
+    @app.exception_handler(UnauthorizedException)
+    async def unauthorized_exception_handler(request: Request, exc: UnauthorizedException):
+        """401 Unauthorized (JWT 누락·만료·무효·로그아웃)"""
+        logger.warning("UnauthorizedException: %s — %s", exc.code, exc.message)
         return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             content={
                 "success": False,
                 "error": {
-                    "code": "NOT_FOUND",
-                    "message": str(exc)
-                }
-            }
+                    "code": exc.code,
+                    "message": exc.message,
+                },
+            },
         )
     
     @app.exception_handler(Exception)

@@ -157,12 +157,19 @@ def refresh_flight(
 def read_flight_logs(
     flight_pk: int,
     change_type: str | None = Query(None, description="변경 타입 필터 (gate_change/delay/status_change/terminal_change)"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """비행편 상태 변경 이력 조회
-    
+    """비행편 상태 변경 이력 조회 (로그인 필수, 본인만)
+
     - flight_pk로 해당 비행편의 모든 상태 변경 로그 조회
     - change_type으로 특정 변경 타입만 필터링 가능
     - 최근 감지 순으로 정렬
     """
+    flight = flight_service.read_flight_by_id(db, flight_pk)
+    if flight.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인의 비행편 로그만 조회할 수 있습니다.",
+        )
     return flight_status_log_service.read_flight_logs(db, flight_pk, change_type)

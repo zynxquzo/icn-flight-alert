@@ -43,7 +43,7 @@
 
 ## 🏗 Database Structure
 
-![ERD](https://github.com/user-attachments/assets/2b533b1a-9c20-4ffc-9b8b-e2f316af8ec7)
+![ERD](https://github.com/user-attachments/assets/7a790f94-26af-4051-ad42-cfd4842c4414)
 
 데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다.
 
@@ -57,7 +57,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 * **Security**: JWT 기반 인증과 `bcrypt` 암호화 알고리즘을 사용한 안전한 회원가입 및 로그인
 * **Authorization**: 본인이 등록한 비행편만 조회/수정/삭제 가능 (403 Forbidden)
-* **Token Management**: 30분 만료 시간이 적용된 JWT 토큰 발급
+* **Token Management**: 30분 만료 시간이 적용된 JWT 토큰 발급, `jti` 기반 `POST /auth/logout` 블랙리스트(단일 프로세스), 만료·누락 시 `401` + `error.code` (`TOKEN_EXPIRED` 등)로 구분
 
 ### 📅 Advanced Flight Monitoring System
 
@@ -87,7 +87,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 * **문서 인덱싱**: 인천공항 공식 사이트 크롤링 및 파싱 후 벡터 DB 저장
 * **맞춤 추천**: 대기 시간(`wait_time_hours`)과 터미널 정보를 고려한 개인화된 답변
 * **유연한 벡터 저장소**: PostgreSQL 배열 또는 ChromaDB 선택 가능 (`VECTOR_BACKEND` 설정)
-* **API**: `GET /chatbot` (소개), `POST /chatbot/chat` (대화) - 응답에 `mode`, `sources` 포함
+* **API**: `GET /chatbot` (소개), `POST /chatbot/chat` (대화) — **JWT 필수**, 응답에 `mode`, `sources` 포함
 
 ### 📊 Comprehensive Logging System
 
@@ -210,7 +210,8 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 | 비즈니스 로직 | 구현 위치 | 방어 방식 |
 |---|---|---|
-| 알림 타입별 필터링 | `notification_service.read_notifications` | notification_type 필터 |
+| 본인 알림·본인 비행편만 조회 | `notification_router` | JWT + 비행편 소유자 검증 |
+| 알림 타입별 필터링 | `notification_service.read_user_notifications` | notification_type 필터 |
 | 전송 성공/실패 기록 | `email_service.send_notification_email` | is_sent boolean 플래그 |
 
 ### RAG 챗봇 관련
@@ -227,12 +228,14 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 ## 📖 API Documentation
 
-![API](https://github.com/user-attachments/assets/518b856d-0f56-4b29-aae3-2cfecce1f78b)
+![API](https://github.com/user-attachments/assets/0715b1ee-bc51-48f0-9a22-0fb02f6ad4db)
 
 모든 API 명세는 Swagger UI를 통해 시각적으로 확인하고 테스트할 수 있습니다.
 
 * **Docs 주소**: `http://localhost:8000/docs`
-* **간단 명세**: [API.md](./API.md)
+* **Notion 주소** `https://www.notion.so/ICN-Flight-Alert-3434e9ce85e980d1880fe3f3c5bb28e8`
+* **API 명세**: [API.md](./API.md)
+
 
 ### 엔드포인트 요약
 
@@ -240,6 +243,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 |--------|------|:--------:|------|
 | `POST` | `/auth/signup` |  | 회원가입 |
 | `POST` | `/auth/login` |  | `access_token` 발급 |
+| `POST` | `/auth/logout` | ✅ | 현재 토큰 무효화(인메모리 블랙리스트), 응답 204 |
 | `GET` | `/me` | ✅ | 내 프로필 |
 | `POST` | `/flights` | ✅ | 등록 시 로그인 사용자에 연동 |
 | `GET` | `/flights` | ✅ | 선택 쿼리 `is_active` (boolean) |
@@ -247,11 +251,11 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | `DELETE` | `/flights/{flight_pk}` | ✅ | 본인 아니면 **403** |
 | `PATCH` | `/flights/{flight_pk}/status` | ✅ | `is_active` 변경, 본인 **403** |
 | `POST` | `/flights/{flight_pk}/refresh` | ✅ | 수동 갱신, 본인 **403** |
-| `GET` | `/flights/{flight_pk}/logs` |  | 변경 이력, `change_type` 선택 필터 |
-| `GET` | `/notifications` |  | `user_email` 쿼리 필수 |
-| `GET` | `/notifications/flights/{flight_pk}` |  | 해당 비행편 알림 목록 |
-| `GET` | `/chatbot` |  | 소개·환경 변수 안내 |
-| `POST` | `/chatbot/chat` |  | 챗봇; 응답 `mode`, `sources` 포함 |
+| `GET` | `/flights/{flight_pk}/logs` | ✅ | 변경 이력, `change_type` 선택 필터, 본인만 |
+| `GET` | `/notifications` | ✅ | 로그인 사용자 이메일 기준 알림, `notification_type` 선택 필터 |
+| `GET` | `/notifications/flights/{flight_pk}` | ✅ | 해당 비행편 알림 목록, 본인만 |
+| `GET` | `/chatbot` | ✅ | 소개·환경 변수 안내 |
+| `POST` | `/chatbot/chat` | ✅ | 챗봇; 응답 `mode`, `sources` 포함 |
 
 프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 포함해야 합니다.
 
@@ -348,8 +352,8 @@ uv run python scripts/crawl_and_index.py --all
 ### RAG 동작 확인
 
 1. 위 인덱싱 스크립트를 한 번 이상 실행해 문서를 적재합니다.
-2. 서버 기동 후 `http://localhost:8000/docs`에서 `POST /chatbot/chat` 호출
-3. 요청: `{ "message": "1터미널 환전 어디 있어?", "terminal": "T1" }`
+2. 서버 기동 후 `http://localhost:8000/docs`에서 로그인(`POST /auth/login`)으로 토큰을 받고, **Authorize**에 `Bearer` 토큰을 입력합니다.
+3. `POST /chatbot/chat` 호출 — 요청 본문 예: `{ "message": "1터미널 환전 어디 있어?", "terminal": "T1" }`
 4. 응답의 `mode`가 `agent` 또는 `rag`이고 `sources`에 문서 정보가 있으면 성공
 
 ### 벡터 저장소 선택

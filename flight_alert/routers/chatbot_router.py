@@ -4,9 +4,13 @@ Chatbot Router
 챗봇 관련 API 엔드포인트
 """
 
-from fastapi import APIRouter
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from flight_alert.dependencies import get_current_user
+from flight_alert.models.user import User
 from flight_alert.services.chatbot_service import chatbot_service
 
 
@@ -47,9 +51,12 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """챗봇과 대화
-    
+async def chat(
+    request: ChatRequest,
+    _: Annotated[User, Depends(get_current_user)],
+):
+    """챗봇과 대화 (로그인 필수, OpenAI 비용·남용 방지)
+
     - 공항에서 할 수 있는 활동 추천
     - 식사, 쇼핑, 휴식 공간 안내
     - 편의시설 정보 제공
@@ -70,8 +77,8 @@ async def chat(request: ChatRequest):
 
 
 @router.get("", tags=["Chatbot"])
-def chatbot_info():
-    """챗봇 서비스 정보"""
+def chatbot_info(_: Annotated[User, Depends(get_current_user)]):
+    """챗봇 서비스 정보 (로그인 필수)"""
     return {
         "service": "인천공항 안내 챗봇",
         "description": "공항 대기 시간 동안 유용한 정보를 제공합니다",

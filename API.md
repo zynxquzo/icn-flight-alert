@@ -87,6 +87,20 @@
 
 `code` 예: `NOT_FOUND`, `BAD_REQUEST`, `EXTERNAL_API_ERROR`, `INTERNAL_SERVER_ERROR`.
 
+**C) Bearer JWT 검증 실패** (`HTTPBearer` + `get_current_user`가 적용된 보호 라우트)
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "TOKEN_EXPIRED",
+    "message": "토큰이 만료되었습니다."
+  }
+}
+```
+
+`error.code` 예: `TOKEN_MISSING` (헤더 없음·Bearer 없음), `TOKEN_EXPIRED`, `TOKEN_INVALID`, `TOKEN_REVOKED` (로그아웃으로 블랙리스트 등록된 토큰).
+
 ### 1.3 공통 HTTP 상태 코드
 
 | 코드 | 설명 |
@@ -97,7 +111,7 @@
 | **400 Bad Request** | 잘못된 요청 (`BadRequestException` 또는 검증 실패) |
 | **401 Unauthorized** | JWT 누락·무효, 로그인 실패 |
 | **403 Forbidden** | 타인의 비행편 접근 등 |
-| **404 Not Found** | 리소스 없음 (`NotFoundException`, `ValueError` 처리 등) |
+| **404 Not Found** | 리소스 없음 (`NotFoundException` 등) |
 | **409 Conflict** | 이메일 중복(회원가입) |
 | **422 Unprocessable Entity** | Pydantic 필드 검증 실패 |
 | **502 Bad Gateway** | 외부 API 오류 (`APIException`) |
@@ -111,9 +125,9 @@
 Authorization: Bearer {access_token}
 ```
 
-**인증 필요**: `/me`, `POST/GET/PATCH/DELETE /flights...` (아래 `GET /flights/{flight_pk}/logs` 제외).
+**인증 필요**: `/me`, `POST /auth/logout`, `GET /notifications`, `GET /notifications/flights/{flight_pk}`, `POST/GET/PATCH/DELETE /flights...`, `GET /flights/{flight_pk}/logs`, `GET /chatbot`, `POST /chatbot/chat`.
 
-**인증 불필요**: `/`, `/health`, `/auth/signup`, `/auth/login`, `GET /flights/{flight_pk}/logs`, `GET /notifications...`, `GET|POST /chatbot...`.
+**인증 불필요**: `/`, `/health`, `/auth/signup`, `/auth/login`.
 
 ### 1.5 CORS
 
@@ -227,6 +241,31 @@ Authorization: Bearer {access_token}
 
 ---
 
+### 3.3 로그아웃
+
+**Endpoint**: `POST /auth/logout`
+
+**설명**: 현재 `Authorization: Bearer` 토큰의 `jti`를 서버 인메모리 블랙리스트에 올려, 만료 시각까지 재사용할 수 없게 합니다. 클라이언트는 응답 후 로컬에 저장한 토큰도 삭제하는 것을 권장합니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (204)**: 본문 없음.
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 형태 | 발생 상황 |
+| :--- | :--- | :--- |
+| **401** | **C)** 형식 (`TOKEN_MISSING` 등) | Bearer 없음·형식 오류 |
+| **401** | **C)** 형식 (`TOKEN_EXPIRED` 등) | 토큰 만료·무효 |
+
+> **운영 참고**: 블랙리스트는 프로세스 메모리에만 있으므로 **단일 워커/인스턴스**에 적합합니다. 수평 확장 시 Redis 등 공유 저장소로 교체하는 것을 권장합니다.
+
+---
+
 ## 4. 사용자 (User)
 
 ### 4.1 내 정보 조회
@@ -255,7 +294,7 @@ Authorization: Bearer {access_token}
 
 | 상태 코드 | 발생 상황 |
 | :--- | :--- |
-| **401** | 토큰 없음·만료·무효 (`OAuth2PasswordBearer` / `get_current_user`) |
+| **401** | 토큰 없음·만료·무효·로그아웃 (`HTTPBearer` / `UnauthorizedException`)|
 
 ---
 
@@ -475,7 +514,13 @@ Authorization: Bearer {access_token}
 
 **Endpoint**: `GET /flights/{flight_pk}/logs`
 
-**설명**: 해당 비행편의 `FlightStatusLog` 목록. **JWT 없이 호출 가능** (라우터에 인증 의존성 없음).
+**설명**: 해당 비행편의 `FlightStatusLog` 목록. **로그인 필수**, 본인 소유 비행편만 조회 가능합니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
 
 **Path Parameters**:
 
@@ -508,6 +553,13 @@ Authorization: Bearer {access_token}
 ]
 ```
 
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 미인증·토큰 만료 등 (§1.2 C) |
+| **403** | 타인 소유 비행편 로그 조회 시도 |
+
 ---
 
 ## 6. 알림 (Notifications)
@@ -520,7 +572,13 @@ Authorization: Bearer {access_token}
 
 **Endpoint**: `GET /notifications/flights/{flight_pk}`
 
-**설명**: 해당 `flight_pk`에 연결된 알림 이력을 조회합니다.
+**설명**: 해당 `flight_pk`에 연결된 알림 이력을 조회합니다. **로그인 필수**, 해당 비행편 소유자만 호출할 수 있습니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
 
 **Path Parameters**:
 
@@ -543,19 +601,31 @@ Authorization: Bearer {access_token}
 ]
 ```
 
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 미인증·토큰 만료 등 (§1.2 C) |
+| **403** | 타인 소유 `flight_pk` 알림 조회 시도 |
+
 ---
 
-### 6.2 사용자 이메일 기준 알림 목록
+### 6.2 로그인 사용자 알림 목록
 
 **Endpoint**: `GET /notifications`
 
-**설명**: 해당 이메일 사용자가 등록한 비행편들에 대한 알림을 모읍니다.
+**설명**: JWT로 식별된 사용자 이메일 기준으로, 등록한 비행편들에 대한 알림을 모읍니다.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
 
 **Query Parameters**:
 
 | 이름 | 타입 | 필수 | 설명 |
 | :--- | :--- | :--- | :--- |
-| `user_email` | string | **예** | 조회할 사용자 이메일 |
 | `notification_type` | string | 아니오 | `delay`, `gate_change`, `cancel`, `terminal_change` |
 
 **Response (200)**: `NotificationResponse[]`.
@@ -579,7 +649,7 @@ Authorization: Bearer {access_token}
 
 | 상태 코드 | 발생 상황 |
 | :--- | :--- |
-| **422** | `user_email` 쿼리 누락 (`Query(...)`) |
+| **401** | 미인증·토큰 만료 등 |
 
 ---
 
@@ -593,7 +663,13 @@ Authorization: Bearer {access_token}
 
 **Endpoint**: `POST /chatbot/chat`
 
-**설명**: 공항 안내 대화. RAG/에이전트 설정에 따라 `mode`, `sources`가 채워집니다.
+**설명**: 공항 안내 대화. RAG/에이전트 설정에 따라 `mode`, `sources`가 채워집니다. **로그인 필수**(OpenAI 비용·남용 방지).
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
 
 **Request Body**:
 
@@ -633,15 +709,33 @@ Authorization: Bearer {access_token}
 | `mode` | `legacy` \| `rag` \| `agent` 등 (구현 기준) |
 | `sources` | 근거 문서 메타 배열 (없으면 빈 배열) |
 
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 미인증·토큰 만료 등 (§1.2 C) |
+
 ---
 
 ### 7.2 챗봇 서비스 정보
 
 **Endpoint**: `GET /chatbot`
 
-**설명**: 서비스 소개, 기능 목록, RAG 관련 **환경 변수 키** 안내 JSON을 반환합니다.
+**설명**: 서비스 소개, 기능 목록, RAG 관련 **환경 변수 키** 안내 JSON을 반환합니다. **로그인 필수**.
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
 
 **Response (200)**: 고정 구조 객체 (`service`, `description`, `features`, `env` 등). 상세 키는 구현(`chatbot_router.py`) 기준으로 변할 수 있으므로 운영 시 실제 응답 또는 `/docs` 스키마를 참고하세요.
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 미인증·토큰 만료 등 (§1.2 C) |
 
 ---
 
@@ -668,6 +762,6 @@ Authorization: Bearer {access_token}
 
 ### 기타
 
-- **JWT**: `JWT_SECRET_KEY`, `JWT_ALGORITHM`(기본 `HS256`), `JWT_EXPIRE_MINUTES`(기본 `30`) — `.env` 참고.
+- **JWT**: `JWT_SECRET_KEY`(필수), `JWT_ALGORITHM`(기본 `HS256`), `JWT_EXPIRE_MINUTES`(기본 `30`) — `.env` 참고. 페이로드에 `jti`가 포함되며, `POST /auth/logout` 시 인메모리 블랙리스트에 등록됩니다.
 - **스케줄러**: 앱 기동 시 비행편 주기 갱신(기본 10분) — `main.py` `lifespan`.
 - **RAG 문서**: 테이블 `airport_documents`, `VECTOR_BACKEND`, `CHROMA_*` 등은 `README.md` 및 `GET /chatbot` 의 `env` 설명 참고.

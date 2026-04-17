@@ -24,3 +24,11 @@ class APIException(Exception):
     def __init__(self, message: str = "External API call failed"):
         self.message = message
         super().__init__(self.message)
+
+
+class UnauthorizedException(Exception):
+    """JWT 누락·만료·무효 등 인증 실패"""
+    def __init__(self, code: str, message: str):
+        self.code = code
+        self.message = message
+        super().__init__(message)
