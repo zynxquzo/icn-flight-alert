@@ -233,8 +233,8 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 모든 API 명세는 Swagger UI를 통해 시각적으로 확인하고 테스트할 수 있습니다.
 
 * **Docs 주소**: `http://localhost:8000/docs`
-* **Notion 주소** `https://www.notion.so/ICN-Flight-Alert-3434e9ce85e980d1880fe3f3c5bb28e8`
 * **API 명세**: [API.md](./API.md)
+* **Notion 주소** [Notion](https://www.notion.so/ICN-Flight-Alert-3434e9ce85e980d1880fe3f3c5bb28e8)
 
 
 ### 엔드포인트 요약
