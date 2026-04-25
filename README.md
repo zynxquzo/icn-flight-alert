@@ -452,4 +452,3 @@ uv run python scripts/crawl_and_index.py --all
 ## 👨‍💻 Author
 
 - GitHub: [@zynxquzo](https://github.com/zynxquzo)
-- Email: prettymysky@gmail.com
