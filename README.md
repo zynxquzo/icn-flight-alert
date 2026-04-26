@@ -425,6 +425,7 @@ uv run python scripts/crawl_and_index.py --all
 * [x] **Exception Handling**: 커스텀 예외 및 전역 핸들러
 * [x] **Frontend (별도 저장소)**: Vite + React 클라이언트 연동
 * [ ] **Push Notification**: Firebase Cloud Messaging 연동
+* [ ] **Alembic Migration**: DB 스키마 버전 관리 및 마이그레이션 자동화
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
 * [ ] **Test Automation**: Pytest를 이용한 유닛 테스트
