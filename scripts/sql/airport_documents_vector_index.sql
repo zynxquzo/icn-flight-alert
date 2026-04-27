@@ -72,7 +72,7 @@ ANALYZE public.airport_documents;
 -- =============================================================================
 -- 데이터(문서 행) 적재 — 인덱스보다 먼저 또는 나중에 실행 가능
 -- =============================================================================
--- 1) 애플리케이션으로 테이블 생성:  uv run uvicorn main:app  (또는 create_all 호출)
+-- 1) 스키마 적용:  uv run alembic upgrade head  (또는 앱 기동 시 자동 적용)
 -- 2) 공항 사이트 크롤·임베딩 적재:
 --      uv run python scripts/crawl_and_index.py --facilities
 --      uv run python scripts/crawl_and_index.py --all

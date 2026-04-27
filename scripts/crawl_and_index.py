@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import flight_alert.models  # noqa: F401, E402 — ORM 메타데이터에 airport_documents 등 등록
-from database import Base, SessionLocal, engine  # noqa: E402
+from database import SessionLocal, run_alembic_upgrade  # noqa: E402
 from flight_alert.repositories.vector_repository import upsert_document, use_chroma_backend  # noqa: E402
 from flight_alert.services.crawler_service import (  # noqa: E402
     crawl_airport_facilities,
@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_schema() -> None:
-    """앱을 띄우지 않고 스크립트만 실행할 때 테이블이 없으면 생성합니다."""
-    Base.metadata.create_all(bind=engine)
+    """앱을 띄우지 않고 스크립트만 실행할 때 Alembic으로 스키마를 head까지 맞춥니다."""
+    run_alembic_upgrade()
     if use_chroma_backend():
         logger.info("VECTOR_BACKEND=chroma — RAG 문서는 ChromaDB에만 적재합니다.")
     else:

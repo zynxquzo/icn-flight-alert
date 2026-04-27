@@ -41,3 +41,18 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def run_alembic_upgrade() -> None:
+    """Alembic을 head까지 적용합니다. 앱·스크립트 기동 시 DB 스키마를 맞출 때 사용합니다."""
+    from pathlib import Path
+
+    from alembic import command
+    from alembic.config import Config
+
+    root = Path(__file__).resolve().parent
+    ini = root / "alembic.ini"
+    if not ini.is_file():
+        raise FileNotFoundError(f"Alembic 설정을 찾을 수 없습니다: {ini}")
+    cfg = Config(str(ini))
+    command.upgrade(cfg, "head")

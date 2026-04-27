@@ -10,6 +10,7 @@
 
 - [Tech Stack](#-tech-stack)
 - [Database Structure](#-database-structure)
+- [Database migrations (Alembic)](#-database-migrations-alembic)
 - [Key Features](#-key-features)
 - [Architecture & Design Patterns](#-architecture--design-patterns)
 - [Business Logic Location](#-business-logic-location)
@@ -29,6 +30,7 @@
 | **Framework** | FastAPI (Asynchronous API Support) |
 | **Database** | PostgreSQL |
 | **ORM** | SQLAlchemy 2.0 |
+| **Migrations** | Alembic (서버·인덱싱 스크립트 기동 시 `upgrade head` 자동 적용) |
 | **Authentication** | JWT (JSON Web Token), bcrypt |
 | **External API** | 인천국제공항 공공데이터 OpenAPI |
 | **Email Service** | Gmail SMTP |
@@ -48,6 +50,23 @@
 데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다.
 
 RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운영되며, `VECTOR_BACKEND=postgres`(기본) 모드에서만 사용됩니다.
+
+---
+
+## 🗄 Database migrations (Alembic)
+
+스키마 변경은 **코드 리비전(Alembic migration 파일)**으로 관리합니다. 프로젝트 루트에 `alembic.ini`, 마이그레이션 스크립트는 `alembic/versions/`에 둡니다.
+
+| 작업 | 명령 |
+|------|------|
+| DB를 최신 스키마로 맞춤 | `uv run alembic upgrade head` |
+| 모델 변경 후 새 마이그레이션 초안 생성 | `uv run alembic revision --autogenerate -m "변경 요약"` |
+| 한 단계 되돌림 | `uv run alembic downgrade -1` |
+| 현재 DB에 적용된 리비전 확인 | `uv run alembic current` |
+
+**초기 baseline**(`0001_baseline`)은 ORM `Base.metadata`와 동일한 결과를 `create_all`로 한 번에 반영합니다. 이후 변경은 `--autogenerate`로 만든 리비전을 검토·수정한 뒤 커밋하는 흐름을 권장합니다.
+
+**애플리케이션**: `main.py` lifespan에서 `run_alembic_upgrade()`를 호출해 기동 시마다 `head`까지 적용합니다. **인덱싱 스크립트** `scripts/crawl_and_index.py`도 동일하게 Alembic을 사용합니다.
 
 ---
 
@@ -284,15 +303,18 @@ cp .env.example .env
 # 4. PostgreSQL 데이터베이스 생성
 createdb flight_alert
 
-# 5. (선택) RAG 문서 인덱싱 — 챗봇에 공항 공식 정보 반영
+# 5. DB 스키마 적용 (서버를 먼저 띄울 경우 startup에서도 동일하게 적용됨)
+uv run alembic upgrade head
+
+# 6. (선택) RAG 문서 인덱싱 — 챗봇에 공항 공식 정보 반영
 uv run python scripts/crawl_and_index.py --facilities
 # 또는: uv run python scripts/crawl_and_index.py --all
 
-# 6. (선택) PostgreSQL에 검색 보조 인덱스
+# 7. (선택) PostgreSQL에 검색 보조 인덱스
 # scripts/sql/airport_documents_vector_index.sql
 # 또는: uv run python scripts/apply_airport_indexes.py
 
-# 7. 서버 실행
+# 8. 서버 실행
 uv run fastapi dev main.py
 ```
 
@@ -404,7 +426,7 @@ uv run python scripts/crawl_and_index.py --all
 
 ### 7. 크롤 스크립트에서 `airport_documents` 테이블 없음
 
-* **해결**: 스크립트가 시작 시 `Base.metadata.create_all`을 호출하므로 `DATABASE_URL`만 맞으면 테이블 생성됨
+* **해결**: 스크립트 시작 시 Alembic `upgrade head`로 스키마를 맞춥니다. `DATABASE_URL`을 설정한 뒤 `uv run alembic upgrade head`를 한 번 실행하거나, 인덱싱 스크립트를 그대로 실행하세요.
 
 ### 8. Windows에서 Chroma 사용 시
 
@@ -425,7 +447,7 @@ uv run python scripts/crawl_and_index.py --all
 * [x] **Exception Handling**: 커스텀 예외 및 전역 핸들러
 * [x] **Frontend (별도 저장소)**: Vite + React 클라이언트 연동
 * [ ] **Push Notification**: Firebase Cloud Messaging 연동
-* [ ] **Alembic Migration**: DB 스키마 버전 관리 및 마이그레이션 자동화
+* [x] **Alembic Migration**: DB 스키마 버전 관리 및 기동 시 `upgrade head` 자동 적용
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
 * [ ] **Test Automation**: Pytest를 이용한 유닛 테스트
