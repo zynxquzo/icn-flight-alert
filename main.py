@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import run_alembic_upgrade
+from database import run_alembic_on_app_startup
 from flight_alert.routers.flight_router import router as flight_router
 from flight_alert.routers.notification_router import router as notification_router
 from flight_alert.routers.chatbot_router import router as chatbot_router
@@ -28,8 +28,8 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 생명주기 관리"""
-    # 서버 시작 시: Alembic 마이그레이션 적용(head)
-    run_alembic_upgrade()
+    # 서버 시작 시: (설정 시) Alembic 마이그레이션 적용 — RUN_ALEMBIC_ON_STARTUP 참고
+    run_alembic_on_app_startup()
     
     # 스케줄러 시작 (10분 주기)
     flight_scheduler.start(interval_minutes=10)

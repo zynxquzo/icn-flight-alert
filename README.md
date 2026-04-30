@@ -30,7 +30,7 @@
 | **Framework** | FastAPI (Asynchronous API Support) |
 | **Database** | PostgreSQL |
 | **ORM** | SQLAlchemy 2.0 |
-| **Migrations** | Alembic (서버·인덱싱 스크립트 기동 시 `upgrade head` 자동 적용) |
+| **Migrations** | Alembic (로컬은 앱 기동 시 `upgrade head` 기본; 프로덕션은 환경 변수로 끄고 CI/CD에서 적용 권장) |
 | **Authentication** | JWT (JSON Web Token), bcrypt |
 | **External API** | 인천국제공항 공공데이터 OpenAPI |
 | **Email Service** | Gmail SMTP |
@@ -66,7 +66,13 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 **초기 baseline**(`0001_baseline`)은 ORM `Base.metadata`와 동일한 결과를 `create_all`로 한 번에 반영합니다. 이후 변경은 `--autogenerate`로 만든 리비전을 검토·수정한 뒤 커밋하는 흐름을 권장합니다.
 
-**애플리케이션**: `main.py` lifespan에서 `run_alembic_upgrade()`를 호출해 기동 시마다 `head`까지 적용합니다. **인덱싱 스크립트** `scripts/crawl_and_index.py`도 동일하게 Alembic을 사용합니다.
+**애플리케이션**: `main.py` lifespan에서 `run_alembic_on_app_startup()`을 호출합니다. 기본값(`RUN_ALEMBIC_ON_STARTUP` 미설정 또는 `true`)이면 기동 시 `head`까지 적용하고, **다중 인스턴스·오토스케일** 환경에서는 인스턴스가 동시에 `upgrade`를 돌리며 락·경합이 날 수 있으므로 `RUN_ALEMBIC_ON_STARTUP=false`로 끄고, **배포/릴리스 직전에** `uv run alembic upgrade head`만 실행하는 방식을 권장합니다.
+
+**인덱싱 스크립트** `scripts/crawl_and_index.py`는 기존처럼 Alembic `upgrade head`를 그대로 호출합니다(단발 스크립트이므로 앱과 달리 동시 실행 겹침 이슈가 적음).
+
+| 환경 변수 | 설명 |
+|-----------|------|
+| `RUN_ALEMBIC_ON_STARTUP` | `true`(기본): 앱 프로세스 기동 시 `alembic upgrade head` 실행. `false`: 건너뜀 — 이때는 배포 파이프라인 등에서 스키마를 맞춰야 함. |
 
 ---
 
@@ -303,7 +309,7 @@ cp .env.example .env
 # 4. PostgreSQL 데이터베이스 생성
 createdb flight_alert
 
-# 5. DB 스키마 적용 (서버를 먼저 띄울 경우 startup에서도 동일하게 적용됨)
+# 5. DB 스키마 적용 (RUN_ALEMBIC_ON_STARTUP=true이면 서버 기동 시에도 적용됨)
 uv run alembic upgrade head
 
 # 6. (선택) RAG 문서 인덱싱 — 챗봇에 공항 공식 정보 반영
@@ -323,6 +329,9 @@ uv run fastapi dev main.py
 ```ini
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/flight_alert
+
+# 앱 기동 시 Alembic 자동 적용 (로컬 true 권장; 프로덕션 다중 워커는 false + 배포 시 upgrade)
+# RUN_ALEMBIC_ON_STARTUP=true
 
 # JWT
 JWT_SECRET_KEY=your-secret-key-here  # openssl rand -hex 32
@@ -447,7 +456,7 @@ uv run python scripts/crawl_and_index.py --all
 * [x] **Exception Handling**: 커스텀 예외 및 전역 핸들러
 * [x] **Frontend (별도 저장소)**: Vite + React 클라이언트 연동
 * [ ] **Push Notification**: Firebase Cloud Messaging 연동
-* [x] **Alembic Migration**: DB 스키마 버전 관리 및 기동 시 `upgrade head` 자동 적용
+* [x] **Alembic Migration**: DB 스키마 버전 관리 및 기동 시 `upgrade head` 선택 적용(`RUN_ALEMBIC_ON_STARTUP`)
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
 * [ ] **Test Automation**: Pytest를 이용한 유닛 테스트
