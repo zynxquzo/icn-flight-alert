@@ -23,7 +23,8 @@ class FlightScheduler:
         """활성화된 비행편 자동 갱신
         
         - is_active=True인 비행편만 조회
-        - 출발 전날부터 출발 당일까지만 갱신
+        - 비행일(flight_date)이 오늘부터 이틀 뒤(포함)까지인 편만 갱신
+          (예: 오늘이 5월 2일이면 5/2·5/3·5/4 출발로 등록된 편)
         - 각 비행편마다 API 호출 및 변경 감지
         """
         from database import SessionLocal
@@ -36,10 +37,10 @@ class FlightScheduler:
         db = SessionLocal()
         
         try:
-            # 갱신 대상: 내일부터 모레까지의 활성 비행편
+            # 갱신 대상: flight_date ∈ [오늘, 오늘+2일] (3일치)
             today = date.today()
-            target_start = today  # 오늘
-            target_end = today + timedelta(days=2)  # 모레
+            target_start = today
+            target_end = today + timedelta(days=2)
             
             # 활성 비행편 조회
             from sqlalchemy import and_

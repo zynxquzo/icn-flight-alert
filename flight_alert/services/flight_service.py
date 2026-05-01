@@ -1,6 +1,7 @@
 # flight_alert/services/flight_service.py
 
 import logging
+import os
 from datetime import datetime, date
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,108 @@ from flight_alert.schemas.flight import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_incheon_datetime(value: str | None) -> datetime | None:
+    """인천 API 시간 문자열(YYYYMMDDHHmm, 12자)을 datetime으로 파싱."""
+    if not value or len(value) < 12:
+        return None
+    try:
+        return datetime.strptime(value[:12], "%Y%m%d%H%M")
+    except ValueError:
+        return None
+
+
+def should_notify_delay_for_estimated_change(
+    old_estimated: str | None,
+    new_estimated: str | None,
+    remark: str | None,
+) -> bool:
+    """estimated_date_time 변경 시 지연/시간변경 알림을 보낼지 여부.
+
+    기본(환경 변수 없음)은 이전과 동일하게, 추정시각이 달라지기만 하면 True.
+
+    좁히기:
+    - FLIGHT_DELAY_MIN_DIFF_MINUTES: 양수면, 이전/이후 시각을 파싱해 그 차이(분)가
+      이 값 미만이면 알림하지 않음(스케줄만 미세 보정된 경우 감소).
+    - FLIGHT_DELAY_REMARK_HINTS: 콤마로 구분한 부분 문자열(비어 있지 않으면)
+      remark에 그중 하나라도 없으면 알림하지 않음(예: 지연,지연됨,delay).
+    """
+    if old_estimated == new_estimated:
+        return False
+
+    min_diff_minutes = int(os.getenv("FLIGHT_DELAY_MIN_DIFF_MINUTES", "0") or "0")
+    dt_old = _parse_incheon_datetime(old_estimated)
+    dt_new = _parse_incheon_datetime(new_estimated)
+    if min_diff_minutes > 0 and dt_old and dt_new:
+        diff_m = abs((dt_new - dt_old).total_seconds()) / 60.0
+        if diff_m < min_diff_minutes:
+            return False
+
+    hints_raw = (os.getenv("FLIGHT_DELAY_REMARK_HINTS") or "").strip()
+    hints = [h.strip() for h in hints_raw.split(",") if h.strip()]
+    if hints:
+        r = (remark or "").lower()
+        if not any(h.lower() in r for h in hints):
+            return False
+
+    return True
+
+
+def _create_status_log_snapshot(flight_pk: int, flight: Flight, change_type: str):
+    from flight_alert.models.flight_status_log import FlightStatusLog
+
+    return FlightStatusLog(
+        flight_pk=flight_pk,
+        schedule_date_time=flight.schedule_date_time,
+        estimated_date_time=flight.estimated_date_time,
+        terminal_id=flight.terminal_id,
+        gate_number=flight.gate_number,
+        remark=flight.remark,
+        carousel=flight.carousel,
+        change_type=change_type,
+    )
+
+
+def _add_notification_and_email(
+    db,
+    flight: Flight,
+    flight_pk: int,
+    notification_type,
+    subject: str,
+    message: str,
+    *,
+    detection_log: str,
+) -> None:
+    from datetime import timezone
+
+    from flight_alert.models.notification import Notification
+
+    notification = Notification(
+        flight_pk=flight_pk,
+        notification_type=notification_type,
+        message=message,
+        sent_to=flight.user_email,
+        sent_at=datetime.now(timezone.utc),
+        is_sent=False,
+    )
+    db.add(notification)
+    db.flush()
+
+    email_sent = email_service.send_notification_email(
+        to_email=flight.user_email,
+        subject=subject,
+        message=message,
+        flight_id=flight.flight_id,
+    )
+
+    if email_sent:
+        notification.is_sent = True
+        logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
+    else:
+        logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
+
+    logger.info(detection_log)
 
 
 class FlightService:
@@ -149,9 +252,8 @@ class FlightService:
             dict: 변경 사항 정보
         """
         from datetime import datetime, timezone
-        from flight_alert.models.flight_status_log import FlightStatusLog
-        from flight_alert.models.notification import Notification, NotificationType
-        
+        from flight_alert.models.notification import NotificationType
+
         flight = self.read_flight_by_id(db, flight_pk)
         
         # 기존 값 저장 (변경 감지용)
@@ -192,225 +294,99 @@ class FlightService:
         
         # 게이트 변경 감지
         if old_gate != flight.gate_number:
-            change_info = {
+            changes.append({
                 "field": "gate_number",
                 "old_value": old_gate,
                 "new_value": flight.gate_number,
-                "change_type": "gate_change"
-            }
-            changes.append(change_info)
-            
-            # FlightStatusLog 생성
-            log = FlightStatusLog(
-                flight_pk=flight_pk,
-                schedule_date_time=flight.schedule_date_time,
-                estimated_date_time=flight.estimated_date_time,
-                terminal_id=flight.terminal_id,
-                gate_number=flight.gate_number,
-                remark=flight.remark,
-                carousel=flight.carousel,
-                change_type="gate_change",
+                "change_type": "gate_change",
+            })
+            db.add(_create_status_log_snapshot(flight_pk, flight, "gate_change"))
+            _add_notification_and_email(
+                db,
+                flight,
+                flight_pk,
+                NotificationType.gate_change,
+                f"[게이트 변경] {flight.flight_id} - 인천공항 알림",
+                f"게이트가 {old_gate}에서 {flight.gate_number}로 변경되었습니다",
+                detection_log=f"게이트 변경 감지: {old_gate} → {flight.gate_number}",
             )
-            db.add(log)
-            
-            # Notification 생성
-            message = f"게이트가 {old_gate}에서 {flight.gate_number}로 변경되었습니다"
-            notification = Notification(
-                flight_pk=flight_pk,
-                notification_type=NotificationType.gate_change,
-                message=message,
-                sent_to=flight.user_email,
-                sent_at=datetime.now(timezone.utc),
-                is_sent=False,
-            )
-            db.add(notification)
-            db.flush()  # notification_id 생성
-            
-            # 이메일 발송
-            email_sent = email_service.send_notification_email(
-                to_email=flight.user_email,
-                subject=f"[게이트 변경] {flight.flight_id} - 인천공항 알림",
-                message=message,
-                flight_id=flight.flight_id,
-            )
-            
-            if email_sent:
-                notification.is_sent = True
-                logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
-            else:
-                logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
-            
-            logger.info(f"게이트 변경 감지: {old_gate} → {flight.gate_number}")
-        
+
         # 터미널 변경 감지
         if old_terminal != flight.terminal_id:
-            change_info = {
+            changes.append({
                 "field": "terminal_id",
                 "old_value": old_terminal,
                 "new_value": flight.terminal_id,
-                "change_type": "terminal_change"
-            }
-            changes.append(change_info)
-            
-            # FlightStatusLog 생성
-            log = FlightStatusLog(
-                flight_pk=flight_pk,
-                schedule_date_time=flight.schedule_date_time,
-                estimated_date_time=flight.estimated_date_time,
-                terminal_id=flight.terminal_id,
-                gate_number=flight.gate_number,
-                remark=flight.remark,
-                carousel=flight.carousel,
-                change_type="terminal_change",
+                "change_type": "terminal_change",
+            })
+            db.add(_create_status_log_snapshot(flight_pk, flight, "terminal_change"))
+            _add_notification_and_email(
+                db,
+                flight,
+                flight_pk,
+                NotificationType.terminal_change,
+                f"[터미널 변경] {flight.flight_id} - 인천공항 알림",
+                f"터미널이 {old_terminal}에서 {flight.terminal_id}로 변경되었습니다",
+                detection_log=f"터미널 변경 감지: {old_terminal} → {flight.terminal_id}",
             )
-            db.add(log)
-            
-            # Notification 생성
-            message = f"터미널이 {old_terminal}에서 {flight.terminal_id}로 변경되었습니다"
-            notification = Notification(
-                flight_pk=flight_pk,
-                notification_type=NotificationType.terminal_change,
-                message=message,
-                sent_to=flight.user_email,
-                sent_at=datetime.now(timezone.utc),
-                is_sent=False,
-            )
-            db.add(notification)
-            db.flush()
-            
-            # 이메일 발송
-            email_sent = email_service.send_notification_email(
-                to_email=flight.user_email,
-                subject=f"[터미널 변경] {flight.flight_id} - 인천공항 알림",
-                message=message,
-                flight_id=flight.flight_id,
-            )
-            
-            if email_sent:
-                notification.is_sent = True
-                logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
-            else:
-                logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
-            
-            logger.info(f"터미널 변경 감지: {old_terminal} → {flight.terminal_id}")
-        
-        # 지연 감지
+
+        # 추정 시각 변경 (로그는 항상, 알림은 조건 충족 시만 — 아래 환경 변수 참고)
         if old_estimated != flight.estimated_date_time:
-            change_info = {
+            notify_delay = should_notify_delay_for_estimated_change(
+                old_estimated, flight.estimated_date_time, flight.remark
+            )
+            # DB flight_status_logs.change_type 길이 제한(20자) 준수
+            est_change_type = "delay" if notify_delay else "eta_adjust"
+            changes.append({
                 "field": "estimated_date_time",
                 "old_value": old_estimated,
                 "new_value": flight.estimated_date_time,
-                "change_type": "delay"
-            }
-            changes.append(change_info)
-            
-            # FlightStatusLog 생성
-            log = FlightStatusLog(
-                flight_pk=flight_pk,
-                schedule_date_time=flight.schedule_date_time,
-                estimated_date_time=flight.estimated_date_time,
-                terminal_id=flight.terminal_id,
-                gate_number=flight.gate_number,
-                remark=flight.remark,
-                carousel=flight.carousel,
-                change_type="delay",
-            )
-            db.add(log)
-            
-            # 지연 시간 계산
-            if old_estimated and flight.estimated_date_time:
-                message = f"출발/도착 시각이 변경되었습니다 ({old_estimated} → {flight.estimated_date_time})"
+                "change_type": est_change_type,
+            })
+            db.add(_create_status_log_snapshot(flight_pk, flight, est_change_type))
+            if notify_delay:
+                if old_estimated and flight.estimated_date_time:
+                    msg = (
+                        f"출발/도착 시각이 변경되었습니다 "
+                        f"({old_estimated} → {flight.estimated_date_time})"
+                    )
+                else:
+                    msg = "출발/도착 시각이 업데이트되었습니다"
+                _add_notification_and_email(
+                    db,
+                    flight,
+                    flight_pk,
+                    NotificationType.delay,
+                    f"[시간 변경] {flight.flight_id} - 인천공항 알림",
+                    msg,
+                    detection_log=f"지연/시간 변경 알림: {old_estimated} → {flight.estimated_date_time}",
+                )
             else:
-                message = f"출발/도착 시각이 업데이트되었습니다"
-            
-            # Notification 생성
-            notification = Notification(
-                flight_pk=flight_pk,
-                notification_type=NotificationType.delay,
-                message=message,
-                sent_to=flight.user_email,
-                sent_at=datetime.now(timezone.utc),
-                is_sent=False,
-            )
-            db.add(notification)
-            db.flush()
-            
-            # 이메일 발송
-            email_sent = email_service.send_notification_email(
-                to_email=flight.user_email,
-                subject=f"[시간 변경] {flight.flight_id} - 인천공항 알림",
-                message=message,
-                flight_id=flight.flight_id,
-            )
-            
-            if email_sent:
-                notification.is_sent = True
-                logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
-            else:
-                logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
-            
-            logger.info(f"지연 감지: {old_estimated} → {flight.estimated_date_time}")
-        
+                logger.info(
+                    "추정시각 변경(알림 생략, FLIGHT_DELAY_* 조건): "
+                    f"{old_estimated} → {flight.estimated_date_time}"
+                )
+
         # 운항 상태 변경 감지
         if old_remark != flight.remark:
-            change_info = {
+            changes.append({
                 "field": "remark",
                 "old_value": old_remark,
                 "new_value": flight.remark,
-                "change_type": "status_change"
-            }
-            changes.append(change_info)
-            
-            # FlightStatusLog 생성
-            log = FlightStatusLog(
-                flight_pk=flight_pk,
-                schedule_date_time=flight.schedule_date_time,
-                estimated_date_time=flight.estimated_date_time,
-                terminal_id=flight.terminal_id,
-                gate_number=flight.gate_number,
-                remark=flight.remark,
-                carousel=flight.carousel,
-                change_type="status_change",
-            )
-            db.add(log)
-            
-            # 결항 여부 확인
+                "change_type": "status_change",
+            })
+            db.add(_create_status_log_snapshot(flight_pk, flight, "status_change"))
+
             if flight.remark and "결항" in flight.remark:
-                notification_type = NotificationType.cancel
-                message = f"비행편이 결항되었습니다"
-            else:
-                # 일반 상태 변경은 알림 생성하지 않음 (너무 많아질 수 있음)
-                notification_type = None
-                message = None
-            
-            if notification_type:
-                # Notification 생성
-                notification = Notification(
-                    flight_pk=flight_pk,
-                    notification_type=notification_type,
-                    message=message,
-                    sent_to=flight.user_email,
-                    sent_at=datetime.now(timezone.utc),
-                    is_sent=False,
+                _add_notification_and_email(
+                    db,
+                    flight,
+                    flight_pk,
+                    NotificationType.cancel,
+                    f"[결항] {flight.flight_id} - 인천공항 알림",
+                    "비행편이 결항되었습니다",
+                    detection_log=f"운항 상태 변경 감지: {old_remark} → {flight.remark}",
                 )
-                db.add(notification)
-                db.flush()
-                
-                # 이메일 발송
-                email_sent = email_service.send_notification_email(
-                    to_email=flight.user_email,
-                    subject=f"[결항] {flight.flight_id} - 인천공항 알림",
-                    message=message,
-                    flight_id=flight.flight_id,
-                )
-                
-                if email_sent:
-                    notification.is_sent = True
-                    logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
-                else:
-                    logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
-                
-                logger.info(f"운항 상태 변경 감지: {old_remark} → {flight.remark}")
         
         # 업데이트 반영
         flight_repository.update(db, flight)

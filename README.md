@@ -341,6 +341,11 @@ JWT_EXPIRE_MINUTES=30
 # Incheon Airport API
 INCHEON_AIRPORT_API_KEY=your-api-key-here
 
+# 추정 시각(지연) 이메일 알림 튜닝 (선택; flight_service.refresh_flight)
+# 추정시각이 바뀌어도 스케줄만 살짝 고친 경우 메일을 줄이려면 아래를 조합해 사용
+# FLIGHT_DELAY_MIN_DIFF_MINUTES=0   # 이전·이후 시각 차이(분)가 이 값 미만이면 메일 생략. 0 또는 미설정=변경만 있어도 알림
+# FLIGHT_DELAY_REMARK_HINTS=       # 콤마 구분 부분 문자열(예: 지연,delay). 비어 있지 않으면 remark에 하나도 없으면 메일 생략
+
 # Gmail SMTP
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
