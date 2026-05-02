@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from flight_alert.repositories import vector_repository
 from flight_alert.services.embedding_service import generate_embedding
@@ -58,7 +58,7 @@ def _parse_int(v: Any, default: int, lo: int, hi: int) -> int:
 
 
 async def execute_agent_tool(
-    db: Session,
+    db: AsyncSession,
     name: str,
     arguments_json: str,
     *,
@@ -86,7 +86,7 @@ async def execute_agent_tool(
                 terminal = default_terminal
 
             emb = await generate_embedding(q)
-            docs = vector_repository.search_similar_documents(
+            docs = await vector_repository.search_similar_documents(
                 db,
                 emb,
                 top_k=top_k,
@@ -108,7 +108,7 @@ async def execute_agent_tool(
             category = (args.get("category") or "").strip() or None
             term_arg = (args.get("terminal") or "").strip().upper() or None
             terminal = term_arg if term_arg in ("T1", "T2", "CONCOURSE") else default_terminal
-            docs = vector_repository.search_keyword_documents(
+            docs = await vector_repository.search_keyword_documents(
                 db,
                 q,
                 top_k=top_k,
@@ -123,14 +123,14 @@ async def execute_agent_tool(
             return json.dumps(payload, ensure_ascii=False), sources
 
         if name == "list_airport_doc_categories":
-            cats = vector_repository.list_distinct_categories(db)
+            cats = await vector_repository.list_distinct_categories(db)
             return json.dumps({"categories": cats}, ensure_ascii=False), []
 
         if name == "get_airport_document":
             doc_id = (args.get("doc_id") or "").strip()
             if not doc_id:
                 return json.dumps({"document": None, "error": "missing_doc_id"}, ensure_ascii=False), []
-            doc = vector_repository.get_document_by_id(db, doc_id)
+            doc = await vector_repository.get_document_by_id(db, doc_id)
             if not doc:
                 return json.dumps({"document": None, "found": False}, ensure_ascii=False), []
             d = _doc_public_dict(doc)

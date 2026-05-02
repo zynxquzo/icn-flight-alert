@@ -32,10 +32,12 @@ target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
+    from database import normalize_database_url_to_sync_psycopg2
+
     url = os.getenv("DATABASE_URL")
     if not url:
         raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다.")
-    return url
+    return normalize_database_url_to_sync_psycopg2(url)
 
 
 def run_migrations_offline() -> None:

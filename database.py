@@ -1,14 +1,16 @@
 # database.py
 """
 Database Configuration
-PostgreSQL 연결 설정
+PostgreSQL 연결 설정 (SQLAlchemy 2 async + asyncpg)
 """
 
 import logging
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from collections.abc import AsyncGenerator
+
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 load_dotenv()
 
@@ -23,21 +25,47 @@ def _env_bool(name: str, default: bool) -> bool:
     return str(raw).strip().lower() in ("1", "true", "yes", "on")
 
 
-# PostgreSQL 연결 URL
-DATABASE_URL = os.getenv("DATABASE_URL")
+def normalize_database_url_to_async(url: str) -> str:
+    """postgresql:// … → postgresql+asyncpg:// …"""
+    if "+asyncpg" in url:
+        return url
+    u = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+    if u.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + u[len("postgresql://") :]
+    raise ValueError(
+        "DATABASE_URL은 PostgreSQL 연결 문자열이어야 합니다 (postgresql:// 또는 postgresql+asyncpg://)."
+    )
 
-if not DATABASE_URL:
+
+def normalize_database_url_to_sync_psycopg2(url: str) -> str:
+    """Alembic·psycopg2 스크립트용: postgresql+asyncpg:// → postgresql+psycopg2://"""
+    if "+asyncpg" in url:
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    return url
+
+
+# PostgreSQL 연결 URL
+_DATABASE_URL_RAW = os.getenv("DATABASE_URL")
+
+if not _DATABASE_URL_RAW:
     raise ValueError("DATABASE_URL 환경 변수가 설정되지 않았습니다")
 
-# SQLAlchemy 엔진 생성
-engine = create_engine(
+DATABASE_URL = normalize_database_url_to_async(_DATABASE_URL_RAW)
+
+# SQLAlchemy 비동기 엔진
+engine = create_async_engine(
     DATABASE_URL,
-    echo=False,  # SQL 로그 출력 (개발 시 True로 설정 가능)
-    pool_pre_ping=True,  # 연결 유효성 확인
+    echo=False,
+    pool_pre_ping=True,
 )
 
-# 세션 팩토리
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+async_session_maker = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 
 # SQLAlchemy 2.0 스타일의 Base 클래스 선언
@@ -45,14 +73,10 @@ class Base(DeclarativeBase):
     pass
 
 
-# Dependency for FastAPI
-def get_db():
-    """FastAPI 의존성: DB 세션 제공"""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI 의존성: 비동기 DB 세션 제공"""
+    async with async_session_maker() as session:
+        yield session
 
 
 def run_alembic_upgrade() -> None:

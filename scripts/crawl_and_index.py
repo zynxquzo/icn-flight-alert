@@ -25,7 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import flight_alert.models  # noqa: F401, E402 — ORM 메타데이터에 airport_documents 등 등록
-from database import SessionLocal, run_alembic_upgrade  # noqa: E402
+from database import async_session_maker, run_alembic_upgrade  # noqa: E402
 from flight_alert.repositories.vector_repository import upsert_document, use_chroma_backend  # noqa: E402
 from flight_alert.services.crawler_service import (  # noqa: E402
     crawl_airport_facilities,
@@ -51,7 +51,7 @@ def ensure_schema() -> None:
         logger.info("DB 스키마 확인·생성 완료 (airport_documents 포함)")
 
 
-def _index_docs(docs: list[dict], label: str) -> int:
+async def _index_docs(docs: list[dict], label: str) -> int:
     if not docs:
         logger.warning("%s: 파싱된 문서가 없습니다.", label)
         return 0
@@ -61,25 +61,23 @@ def _index_docs(docs: list[dict], label: str) -> int:
             text = build_embedding_text(doc)
             emb = generate_embedding_sync(text)
             payload = {**doc, "embedding": emb}
-            upsert_document(None, payload)
+            await upsert_document(None, payload)
             n += 1
         logger.info("%s: %s개 문서 인덱싱 완료 (Chroma)", label, n)
         return n
 
-    db = SessionLocal()
-    try:
-        for doc in docs:
-            text = build_embedding_text(doc)
-            emb = generate_embedding_sync(text)
-            payload = {**doc, "embedding": emb}
-            upsert_document(db, payload)
-            n += 1
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
+    async with async_session_maker() as db:
+        try:
+            for doc in docs:
+                text = build_embedding_text(doc)
+                emb = generate_embedding_sync(text)
+                payload = {**doc, "embedding": emb}
+                await upsert_document(db, payload)
+                n += 1
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
     logger.info("%s: %s개 문서 인덱싱 완료", label, n)
     return n
 
@@ -91,13 +89,13 @@ async def run_facilities(terminal: str) -> int:
         source_url=url,
         default_terminal=terminal.upper(),
     )
-    return _index_docs(docs, f"편의시설({terminal})")
+    return await _index_docs(docs, f"편의시설({terminal})")
 
 
 async def run_food() -> int:
     html, url = await crawl_airport_food()
     docs = parse_food_html(html, source_url=url)
-    return _index_docs(docs, "식음료")
+    return await _index_docs(docs, "식음료")
 
 
 async def main_async(args: argparse.Namespace) -> None:

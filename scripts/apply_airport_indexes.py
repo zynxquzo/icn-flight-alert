@@ -31,6 +31,10 @@ def main() -> None:
         print("DATABASE_URL 환경 변수가 없습니다.")
         sys.exit(1)
 
+    from database import normalize_database_url_to_sync_psycopg2
+
+    url = normalize_database_url_to_sync_psycopg2(url)
+
     sql = SQL_FILE.read_text(encoding="utf-8")
     conn = psycopg2.connect(url)
     conn.autocommit = True

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional, Union
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from flight_alert.models.airport_document import AirportDocument
 
@@ -35,7 +35,9 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     return dot / (math.sqrt(na) * math.sqrt(nb))
 
 
-def upsert_document(db: Session | None, payload: dict[str, Any]) -> AirportDocLike:
+async def upsert_document(
+    db: AsyncSession | None, payload: dict[str, Any]
+) -> AirportDocLike:
     """doc_id 기준 삽입/갱신. Chroma 모드에서는 db 미사용."""
     if use_chroma_backend():
         from flight_alert.repositories.chroma_rag_store import chroma_upsert_document
@@ -46,31 +48,36 @@ def upsert_document(db: Session | None, payload: dict[str, Any]) -> AirportDocLi
         raise ValueError("PostgreSQL 모드에서는 db 세션이 필요합니다")
     doc_id = payload["doc_id"]
     now = datetime.now(timezone.utc)
-    existing = db.scalar(select(AirportDocument).where(AirportDocument.doc_id == doc_id))
+    existing = await db.scalar(
+        select(AirportDocument).where(AirportDocument.doc_id == doc_id)
+    )
     if existing:
         for key, value in payload.items():
             if key == "doc_id":
                 continue
             setattr(existing, key, value)
         existing.updated_at = now
-        db.flush()
+        await db.flush()
         return existing
     row = AirportDocument(**payload)
     db.add(row)
-    db.flush()
+    await db.flush()
     return row
 
 
-def count_documents(db: Session | None) -> int:
+async def count_documents(db: AsyncSession | None) -> int:
     if use_chroma_backend():
         from flight_alert.repositories.chroma_rag_store import chroma_count_documents
 
         return chroma_count_documents()
-    return db.scalar(select(func.count()).select_from(AirportDocument)) or 0
+    if db is None:
+        raise ValueError("PostgreSQL 모드에서는 db 세션이 필요합니다")
+    result = await db.execute(select(func.count()).select_from(AirportDocument))
+    return int(result.scalar_one() or 0)
 
 
-def search_similar_documents(
-    db: Session | None,
+async def search_similar_documents(
+    db: AsyncSession | None,
     query_embedding: list[float],
     *,
     top_k: int = 5,
@@ -94,7 +101,8 @@ def search_similar_documents(
         stmt = stmt.where(AirportDocument.category == category)
     if terminal:
         stmt = stmt.where(AirportDocument.terminal == terminal)
-    rows = list(db.execute(stmt).scalars().all())
+    result = await db.execute(stmt)
+    rows = list(result.scalars().all())
     scored: list[tuple[float, AirportDocument]] = []
     for row in rows:
         emb = row.embedding
@@ -106,29 +114,34 @@ def search_similar_documents(
     return [r for _, r in scored[:top_k]]
 
 
-def get_document_by_id(db: Session | None, doc_id: str) -> AirportDocLike | None:
+async def get_document_by_id(
+    db: AsyncSession | None, doc_id: str
+) -> AirportDocLike | None:
     if use_chroma_backend():
         from flight_alert.repositories.chroma_rag_store import chroma_get_document
 
         return chroma_get_document(doc_id)
     if db is None:
         raise ValueError("PostgreSQL 모드에서는 db 세션이 필요합니다")
-    return db.scalar(select(AirportDocument).where(AirportDocument.doc_id == doc_id))
+    return await db.scalar(
+        select(AirportDocument).where(AirportDocument.doc_id == doc_id)
+    )
 
 
-def list_distinct_categories(db: Session | None) -> list[str]:
+async def list_distinct_categories(db: AsyncSession | None) -> list[str]:
     if use_chroma_backend():
         from flight_alert.repositories.chroma_rag_store import chroma_list_categories
 
         return chroma_list_categories()
     if db is None:
         raise ValueError("PostgreSQL 모드에서는 db 세션이 필요합니다")
-    rows = db.execute(select(AirportDocument.category).distinct()).scalars().all()
+    result = await db.execute(select(AirportDocument.category).distinct())
+    rows = result.scalars().all()
     return sorted({r for r in rows if r})
 
 
-def search_keyword_documents(
-    db: Session | None,
+async def search_keyword_documents(
+    db: AsyncSession | None,
     query: str,
     *,
     top_k: int = 8,
@@ -162,4 +175,5 @@ def search_keyword_documents(
     if terminal:
         stmt = stmt.where(AirportDocument.terminal == terminal)
     stmt = stmt.limit(top_k)
-    return list(db.execute(stmt).scalars().all())
+    result = await db.execute(stmt)
+    return list(result.scalars().all())

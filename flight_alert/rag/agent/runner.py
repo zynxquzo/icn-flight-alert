@@ -8,7 +8,7 @@ import os
 from typing import Any
 
 from openai import AsyncOpenAI
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from flight_alert.rag.agent.executor import execute_agent_tool
 from flight_alert.rag.agent.tools import openai_tool_specs
@@ -51,7 +51,7 @@ def _merge_sources(
 
 async def run_rag_agent(
     client: AsyncOpenAI,
-    db: Session,
+    db: AsyncSession,
     *,
     user_message: str,
     default_terminal: str,

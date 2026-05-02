@@ -1,7 +1,7 @@
 [project]
 name = "icn-flight-alert"
 version = "0.1.0"
-description = "Add your description here"
+description = "인천공항 비행편 모니터링·알림 API (FastAPI, PostgreSQL/asyncpg, 인천공항 OpenAPI)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -14,9 +14,9 @@ dependencies = [
     "lxml>=5.0.0",
     "chromadb>=0.4.22",
     "openai>=2.29.0",
+    "asyncpg>=0.30.0",
     "psycopg2-binary>=2.9.11",
     "pyjwt>=2.12.1",
     "python-dotenv>=1.2.2",
-    "requests>=2.32.5",
     "sqlalchemy>=2.0.48",
 ]

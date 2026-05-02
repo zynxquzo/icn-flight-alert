@@ -6,7 +6,7 @@ Dependencies
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from flight_alert.exceptions import UnauthorizedException
@@ -25,9 +25,9 @@ def get_bearer_token(
     return credentials.credentials.strip()
 
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(get_bearer_token),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """현재 로그인한 사용자 조회"""
-    return auth_service.get_current_user(db, token)
+    return await auth_service.get_current_user(db, token)

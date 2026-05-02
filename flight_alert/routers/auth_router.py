@@ -5,7 +5,7 @@ Auth Router
 """
 
 from fastapi import APIRouter, Depends, Response, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from flight_alert.dependencies import get_bearer_token
@@ -21,23 +21,23 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(data: UserCreate, db: Session = Depends(get_db)):
+async def signup(data: UserCreate, db: AsyncSession = Depends(get_db)):
     """회원가입
-    
+
     - 이메일과 비밀번호로 계정 생성
     - 이메일 중복 시 409 에러
     """
-    return auth_service.signup(db, data)
+    return await auth_service.signup(db, data)
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(data: UserLogin, db: Session = Depends(get_db)):
+async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
     """로그인
-    
+
     - 이메일/비밀번호 확인
     - JWT 토큰 발급
     """
-    access_token = auth_service.login(db, data)
+    access_token = await auth_service.login(db, data)
     return {"access_token": access_token}
 
 

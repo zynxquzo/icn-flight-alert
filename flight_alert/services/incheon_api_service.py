@@ -1,14 +1,14 @@
 # flight_alert/services/incheon_api_service.py
 """
 Incheon Airport OpenAPI Service
-인천공항 여객편 주간 운항 현황 API 연동
+인천공항 여객편 주간 운항 현황 API 연동 (httpx 비동기)
 """
 
 import logging
 import os
 from datetime import date
 
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -52,7 +52,7 @@ class IncheonAPIService:
     API_KEY = os.getenv("INCHEON_AIRPORT_API_KEY")
 
     @classmethod
-    def get_flight_info(
+    async def get_flight_info(
         cls,
         flight_id: str,
         flight_date: date,
@@ -88,14 +88,19 @@ class IncheonAPIService:
         if airport_code:
             params["airport_code"] = airport_code
 
+        url = f"{cls.BASE_URL}{endpoint}"
+        logger.info(
+            "인천공항 API 호출: %s, flight_id=%s, flight_date=%s",
+            endpoint,
+            flight_id,
+            flight_date,
+        )
+
         try:
-            url = f"{cls.BASE_URL}{endpoint}"
-            logger.info("인천공항 API 호출: %s, flight_id=%s, flight_date=%s", endpoint, flight_id, flight_date)
-
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-
-            data = response.json()
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                data = response.json()
 
             if data["response"]["header"]["resultCode"] != "00":
                 logger.error("API 에러: %s", data["response"]["header"]["resultMsg"])
@@ -110,9 +115,7 @@ class IncheonAPIService:
             ]
 
             by_date = [
-                item
-                for item in by_id
-                if _schedule_date_from_item(item) == flight_date
+                item for item in by_id if _schedule_date_from_item(item) == flight_date
             ]
 
             if by_date:
@@ -131,7 +134,7 @@ class IncheonAPIService:
             logger.info("비행편 정보 조회 성공: %s (%s)", flight_id, flight_date)
             return flight_data
 
-        except requests.exceptions.RequestException as e:
+        except httpx.HTTPError as e:
             logger.error("API 호출 실패: %s", e)
             return None
         except Exception as e:

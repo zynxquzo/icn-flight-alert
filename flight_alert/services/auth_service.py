@@ -14,7 +14,7 @@ import bcrypt
 import jwt
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from flight_alert.exceptions import UnauthorizedException
 from flight_alert.models.user import User
@@ -76,9 +76,9 @@ class AuthService:
             self._purge_blacklist_unlocked()
             self._token_blacklist[jti] = exp_unix
 
-    def signup(self, db: Session, data: UserCreate) -> User:
+    async def signup(self, db: AsyncSession, data: UserCreate) -> User:
         """회원가입"""
-        existing_user = user_repository.find_by_email(db, data.email)
+        existing_user = await user_repository.find_by_email(db, data.email)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -87,15 +87,15 @@ class AuthService:
 
         hashed_password = self._hash_password(data.password)
         new_user = User(email=data.email, password=hashed_password)
-        user_repository.save(db, new_user)
-        db.commit()
+        await user_repository.save(db, new_user)
+        await db.commit()
 
         logger.info("회원가입 완료: %s", data.email)
         return new_user
 
-    def login(self, db: Session, data: UserLogin) -> str:
+    async def login(self, db: AsyncSession, data: UserLogin) -> str:
         """로그인"""
-        user = user_repository.find_by_email(db, data.email)
+        user = await user_repository.find_by_email(db, data.email)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -123,7 +123,7 @@ class AuthService:
         }
         return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-    def get_current_user(self, db: Session, token: str) -> User:
+    async def get_current_user(self, db: AsyncSession, token: str) -> User:
         """토큰으로 현재 사용자 조회"""
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -147,7 +147,7 @@ class AuthService:
         except (TypeError, ValueError):
             raise UnauthorizedException("TOKEN_INVALID", "유효하지 않은 토큰입니다.")
 
-        user = user_repository.find_by_id(db, user_id)
+        user = await user_repository.find_by_id(db, user_id)
         if not user:
             raise UnauthorizedException("TOKEN_INVALID", "사용자를 찾을 수 없습니다.")
 

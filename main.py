@@ -73,7 +73,7 @@ app.include_router(chatbot_router)
 
 
 @app.get("/", tags=["Health"])
-def health_check():
+async def health_check():
     """헬스 체크"""
     return {
         "status": "ok",
@@ -83,6 +83,6 @@ def health_check():
 
 
 @app.get("/health", tags=["Health"])
-def health():
+async def health():
     """헬스 체크 (간소화)"""
     return {"status": "healthy"}

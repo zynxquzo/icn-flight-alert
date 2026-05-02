@@ -3,13 +3,14 @@
 import logging
 import os
 from datetime import datetime, date
-from sqlalchemy.orm import Session
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from flight_alert.exceptions import NotFoundException
 from flight_alert.models.flight import Flight
 from flight_alert.repositories.flight_repository import flight_repository
-from flight_alert.services.incheon_api_service import incheon_api_service
 from flight_alert.services.email_service import email_service
-from flight_alert.exceptions import NotFoundException
+from flight_alert.services.incheon_api_service import incheon_api_service
 from flight_alert.schemas.flight import (
     FlightCreate,
     FlightResponse,
@@ -34,16 +35,7 @@ def should_notify_delay_for_estimated_change(
     new_estimated: str | None,
     remark: str | None,
 ) -> bool:
-    """estimated_date_time 변경 시 지연/시간변경 알림을 보낼지 여부.
-
-    기본(환경 변수 없음)은 이전과 동일하게, 추정시각이 달라지기만 하면 True.
-
-    좁히기:
-    - FLIGHT_DELAY_MIN_DIFF_MINUTES: 양수면, 이전/이후 시각을 파싱해 그 차이(분)가
-      이 값 미만이면 알림하지 않음(스케줄만 미세 보정된 경우 감소).
-    - FLIGHT_DELAY_REMARK_HINTS: 콤마로 구분한 부분 문자열(비어 있지 않으면)
-      remark에 그중 하나라도 없으면 알림하지 않음(예: 지연,지연됨,delay).
-    """
+    """estimated_date_time 변경 시 지연/시간변경 알림을 보낼지 여부."""
     if old_estimated == new_estimated:
         return False
 
@@ -80,8 +72,8 @@ def _create_status_log_snapshot(flight_pk: int, flight: Flight, change_type: str
     )
 
 
-def _add_notification_and_email(
-    db,
+async def _add_notification_and_email(
+    db: AsyncSession,
     flight: Flight,
     flight_pk: int,
     notification_type,
@@ -103,7 +95,7 @@ def _add_notification_and_email(
         is_sent=False,
     )
     db.add(notification)
-    db.flush()
+    await db.flush()
 
     email_sent = email_service.send_notification_email(
         to_email=flight.user_email,
@@ -122,73 +114,73 @@ def _add_notification_and_email(
 
 
 class FlightService:
-    def create_flight(
-        self, 
-        db: Session, 
+    async def create_flight(
+        self,
+        db: AsyncSession,
         flight_data: FlightCreate,
         user_id: int,
-        user_email: str
+        user_email: str,
     ) -> Flight:
         """비행편 등록
-        
+
         인천공항 API 호출하여 실제 비행편 정보 조회 후 저장
         """
-        # 인천공항 API 호출
-        api_data = incheon_api_service.get_flight_info(
+        api_data = await incheon_api_service.get_flight_info(
             flight_id=flight_data.flight_id,
             flight_date=flight_data.flight_date,
             flight_type=flight_data.flight_type.value,
-            airport_code=None  # 전체 검색
+            airport_code=None,
         )
-        
-        # API 호출 실패 시 기본 정보만 저장
+
         if not api_data:
             logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")
             flight = Flight(
-                user_id=user_id,  # ✅ 추가
-                user_email=user_email,  # ✅ 수정
+                user_id=user_id,
+                user_email=user_email,
                 flight_id=flight_data.flight_id,
                 flight_date=flight_data.flight_date,
                 flight_type=flight_data.flight_type.value,
                 is_active=True,
             )
         else:
-            # API 데이터로 Flight 객체 생성
             flight = Flight(
-                user_id=user_id,  # ✅ 추가
-                user_email=user_email,  # ✅ 수정
-                flight_id=api_data.get('flightId'),
+                user_id=user_id,
+                user_email=user_email,
+                flight_id=api_data.get("flightId"),
                 flight_date=flight_data.flight_date,
                 flight_type=flight_data.flight_type.value,
-                airline=api_data.get('airline'),
-                airport=api_data.get('airport'),
-                airport_code=api_data.get('airportCode'),
-                terminal_id=api_data.get('terminalid'),
-                gate_number=api_data.get('gatenumber'),
-                schedule_date_time=api_data.get('scheduleDateTime'),
-                estimated_date_time=api_data.get('estimatedDateTime'),
-                remark=api_data.get('remark'),
-                chkin_range=api_data.get('chkinrange'),  # 출발편만
-                carousel=api_data.get('carousel'),  # 도착편만
-                exit_number=api_data.get('exitnumber'),  # 도착편만
+                airline=api_data.get("airline"),
+                airport=api_data.get("airport"),
+                airport_code=api_data.get("airportCode"),
+                terminal_id=api_data.get("terminalid"),
+                gate_number=api_data.get("gatenumber"),
+                schedule_date_time=api_data.get("scheduleDateTime"),
+                estimated_date_time=api_data.get("estimatedDateTime"),
+                remark=api_data.get("remark"),
+                chkin_range=api_data.get("chkinrange"),
+                carousel=api_data.get("carousel"),
+                exit_number=api_data.get("exitnumber"),
                 is_active=True,
             )
-        
-        saved_flight = flight_repository.save(db, flight)
-        db.commit()
-        
-        logger.info(f"비행편 등록 완료: flight_pk={saved_flight.flight_pk}, flight_id={saved_flight.flight_id}")
+
+        saved_flight = await flight_repository.save(db, flight)
+        await db.commit()
+
+        logger.info(
+            f"비행편 등록 완료: flight_pk={saved_flight.flight_pk}, "
+            f"flight_id={saved_flight.flight_id}"
+        )
         return saved_flight
 
-    def read_flights(
-        self, 
-        db: Session, 
-        user_id: int, 
-        is_active: bool | None = None
+    async def read_flights(
+        self,
+        db: AsyncSession,
+        user_id: int,
+        is_active: bool | None = None,
     ) -> list[FlightListResponse]:
         """비행편 목록 조회 (로그인한 사용자의 비행편만)"""
-        flights = flight_repository.find_all_by_user_id(db, user_id, is_active)
-        
+        flights = await flight_repository.find_all_by_user_id(db, user_id, is_active)
+
         return [
             FlightListResponse(
                 flight_pk=flight.flight_pk,
@@ -206,102 +198,93 @@ class FlightService:
             for flight in flights
         ]
 
-    def read_flight_by_id(self, db: Session, flight_pk: int) -> Flight:
+    async def read_flight_by_id(self, db: AsyncSession, flight_pk: int) -> Flight:
         """비행편 상세 조회"""
-        flight = flight_repository.find_by_id(db, flight_pk)
+        flight = await flight_repository.find_by_id(db, flight_pk)
         if not flight:
             raise NotFoundException(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
         return flight
 
-    def read_flight_detail(self, db: Session, flight_pk: int) -> FlightResponse:
+    async def read_flight_detail(self, db: AsyncSession, flight_pk: int) -> FlightResponse:
         """비행편 상세 정보 조회"""
-        flight = self.read_flight_by_id(db, flight_pk)
+        flight = await self.read_flight_by_id(db, flight_pk)
         return FlightResponse.model_validate(flight)
 
-    def delete_flight(self, db: Session, flight_pk: int) -> None:
+    async def delete_flight(self, db: AsyncSession, flight_pk: int) -> None:
         """비행편 삭제"""
-        flight = self.read_flight_by_id(db, flight_pk)
-        
-        flight_repository.delete(db, flight)
-        db.commit()
-        
+        flight = await self.read_flight_by_id(db, flight_pk)
+
+        await flight_repository.delete(db, flight)
+        await db.commit()
+
         logger.info(f"비행편 삭제 완료: flight_pk={flight_pk}, flight_id={flight.flight_id}")
 
-    def update_flight_status(self, db: Session, flight_pk: int, is_active: bool) -> Flight:
+    async def update_flight_status(
+        self, db: AsyncSession, flight_pk: int, is_active: bool
+    ) -> Flight:
         """비행편 활성화 상태 변경"""
-        flight = self.read_flight_by_id(db, flight_pk)
-        
-        # 상태 변경
+        flight = await self.read_flight_by_id(db, flight_pk)
+
         flight.is_active = is_active
-        
-        updated_flight = flight_repository.update(db, flight)
-        db.commit()
-        
+
+        updated_flight = await flight_repository.update(db, flight)
+        await db.commit()
+
         status_text = "활성화" if is_active else "비활성화"
         logger.info(f"비행편 상태 변경 완료: flight_pk={flight_pk}, {status_text}")
-        
+
         return updated_flight
 
-    def refresh_flight(self, db: Session, flight_pk: int) -> dict:
-        """비행편 정보 수동 갱신
-        
-        인천공항 API를 호출하여 최신 정보로 업데이트하고
-        변경사항이 있으면 로그 생성 및 알림 생성
-        
-        Returns:
-            dict: 변경 사항 정보
-        """
-        from datetime import datetime, timezone
+    async def refresh_flight(self, db: AsyncSession, flight_pk: int) -> dict:
+        """비행편 정보 수동 갱신"""
+        from datetime import timezone
+
         from flight_alert.models.notification import NotificationType
 
-        flight = self.read_flight_by_id(db, flight_pk)
-        
-        # 기존 값 저장 (변경 감지용)
+        flight = await self.read_flight_by_id(db, flight_pk)
+
         old_gate = flight.gate_number
         old_terminal = flight.terminal_id
         old_estimated = flight.estimated_date_time
         old_remark = flight.remark
-        
-        # 인천공항 API 호출
-        api_data = incheon_api_service.get_flight_info(
+
+        api_data = await incheon_api_service.get_flight_info(
             flight_id=flight.flight_id,
             flight_date=flight.flight_date,
             flight_type=flight.flight_type,
-            airport_code=flight.airport_code
+            airport_code=flight.airport_code,
         )
-        
-        # API 응답 데이터로 업데이트
+
         if api_data:
-            flight.airline = api_data.get('airline')
-            flight.airport = api_data.get('airport')
-            flight.airport_code = api_data.get('airportCode')
-            flight.terminal_id = api_data.get('terminalid')
-            flight.gate_number = api_data.get('gatenumber')
-            flight.schedule_date_time = api_data.get('scheduleDateTime')
-            flight.estimated_date_time = api_data.get('estimatedDateTime')
-            flight.remark = api_data.get('remark')
-            flight.chkin_range = api_data.get('chkinrange')  # 출발편만
-            flight.carousel = api_data.get('carousel')  # 도착편만
-            flight.exit_number = api_data.get('exitnumber')  # 도착편만
+            flight.airline = api_data.get("airline")
+            flight.airport = api_data.get("airport")
+            flight.airport_code = api_data.get("airportCode")
+            flight.terminal_id = api_data.get("terminalid")
+            flight.gate_number = api_data.get("gatenumber")
+            flight.schedule_date_time = api_data.get("scheduleDateTime")
+            flight.estimated_date_time = api_data.get("estimatedDateTime")
+            flight.remark = api_data.get("remark")
+            flight.chkin_range = api_data.get("chkinrange")
+            flight.carousel = api_data.get("carousel")
+            flight.exit_number = api_data.get("exitnumber")
         else:
             logger.warning(f"API 호출 실패 - 기존 데이터 유지: flight_pk={flight_pk}")
-        
-        # 마지막 조회 시각 업데이트
+
         flight.last_checked_at = datetime.now(timezone.utc)
-        
-        # 변경 사항 감지 및 로그/알림 생성
+
         changes = []
-        
-        # 게이트 변경 감지
+
         if old_gate != flight.gate_number:
-            changes.append({
-                "field": "gate_number",
-                "old_value": old_gate,
-                "new_value": flight.gate_number,
-                "change_type": "gate_change",
-            })
+            changes.append(
+                {
+                    "field": "gate_number",
+                    "old_value": old_gate,
+                    "new_value": flight.gate_number,
+                    "change_type": "gate_change",
+                }
+            )
             db.add(_create_status_log_snapshot(flight_pk, flight, "gate_change"))
-            _add_notification_and_email(
+            await _add_notification_and_email(
                 db,
                 flight,
                 flight_pk,
@@ -311,16 +294,17 @@ class FlightService:
                 detection_log=f"게이트 변경 감지: {old_gate} → {flight.gate_number}",
             )
 
-        # 터미널 변경 감지
         if old_terminal != flight.terminal_id:
-            changes.append({
-                "field": "terminal_id",
-                "old_value": old_terminal,
-                "new_value": flight.terminal_id,
-                "change_type": "terminal_change",
-            })
+            changes.append(
+                {
+                    "field": "terminal_id",
+                    "old_value": old_terminal,
+                    "new_value": flight.terminal_id,
+                    "change_type": "terminal_change",
+                }
+            )
             db.add(_create_status_log_snapshot(flight_pk, flight, "terminal_change"))
-            _add_notification_and_email(
+            await _add_notification_and_email(
                 db,
                 flight,
                 flight_pk,
@@ -330,19 +314,19 @@ class FlightService:
                 detection_log=f"터미널 변경 감지: {old_terminal} → {flight.terminal_id}",
             )
 
-        # 추정 시각 변경 (로그는 항상, 알림은 조건 충족 시만 — 아래 환경 변수 참고)
         if old_estimated != flight.estimated_date_time:
             notify_delay = should_notify_delay_for_estimated_change(
                 old_estimated, flight.estimated_date_time, flight.remark
             )
-            # DB flight_status_logs.change_type 길이 제한(20자) 준수
             est_change_type = "delay" if notify_delay else "eta_adjust"
-            changes.append({
-                "field": "estimated_date_time",
-                "old_value": old_estimated,
-                "new_value": flight.estimated_date_time,
-                "change_type": est_change_type,
-            })
+            changes.append(
+                {
+                    "field": "estimated_date_time",
+                    "old_value": old_estimated,
+                    "new_value": flight.estimated_date_time,
+                    "change_type": est_change_type,
+                }
+            )
             db.add(_create_status_log_snapshot(flight_pk, flight, est_change_type))
             if notify_delay:
                 if old_estimated and flight.estimated_date_time:
@@ -352,14 +336,16 @@ class FlightService:
                     )
                 else:
                     msg = "출발/도착 시각이 업데이트되었습니다"
-                _add_notification_and_email(
+                await _add_notification_and_email(
                     db,
                     flight,
                     flight_pk,
                     NotificationType.delay,
                     f"[시간 변경] {flight.flight_id} - 인천공항 알림",
                     msg,
-                    detection_log=f"지연/시간 변경 알림: {old_estimated} → {flight.estimated_date_time}",
+                    detection_log=(
+                        f"지연/시간 변경 알림: {old_estimated} → {flight.estimated_date_time}"
+                    ),
                 )
             else:
                 logger.info(
@@ -367,18 +353,19 @@ class FlightService:
                     f"{old_estimated} → {flight.estimated_date_time}"
                 )
 
-        # 운항 상태 변경 감지
         if old_remark != flight.remark:
-            changes.append({
-                "field": "remark",
-                "old_value": old_remark,
-                "new_value": flight.remark,
-                "change_type": "status_change",
-            })
+            changes.append(
+                {
+                    "field": "remark",
+                    "old_value": old_remark,
+                    "new_value": flight.remark,
+                    "change_type": "status_change",
+                }
+            )
             db.add(_create_status_log_snapshot(flight_pk, flight, "status_change"))
 
             if flight.remark and "결항" in flight.remark:
-                _add_notification_and_email(
+                await _add_notification_and_email(
                     db,
                     flight,
                     flight_pk,
@@ -387,21 +374,19 @@ class FlightService:
                     "비행편이 결항되었습니다",
                     detection_log=f"운항 상태 변경 감지: {old_remark} → {flight.remark}",
                 )
-        
-        # 업데이트 반영
-        flight_repository.update(db, flight)
-        db.commit()
-        
+
+        await flight_repository.update(db, flight)
+        await db.commit()
+
         logger.info(
-            f"비행편 갱신 완료: flight_pk={flight_pk}, "
-            f"변경사항={len(changes)}건"
+            f"비행편 갱신 완료: flight_pk={flight_pk}, 변경사항={len(changes)}건"
         )
-        
+
         return {
             "flight_pk": flight_pk,
             "changes_detected": len(changes) > 0,
             "changes": changes,
-            "updated_at": flight.last_checked_at
+            "updated_at": flight.last_checked_at,
         }
 
 

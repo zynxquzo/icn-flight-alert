@@ -24,11 +24,9 @@ from dotenv import load_dotenv
 
 from openai import AsyncOpenAI, OpenAI
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-
-
-from database import SessionLocal
+from database import async_session_maker
 
 from flight_alert.rag.agent.runner import run_rag_agent
 
@@ -290,7 +288,7 @@ class ChatbotService:
 
         self,
 
-        db: Session,
+        db: AsyncSession,
 
         message: str,
 
@@ -304,7 +302,7 @@ class ChatbotService:
 
         try:
 
-            if vector_repository.count_documents(db) == 0:
+            if await vector_repository.count_documents(db) == 0:
 
                 return self._chat_legacy(message, terminal, wait_time_hours)
 
@@ -316,7 +314,7 @@ class ChatbotService:
 
             top_k = _rag_top_k()
 
-            docs = vector_repository.search_similar_documents(
+            docs = await vector_repository.search_similar_documents(
 
                 db,
 
@@ -330,7 +328,7 @@ class ChatbotService:
 
             if not docs:
 
-                docs = vector_repository.search_similar_documents(
+                docs = await vector_repository.search_similar_documents(
 
                     db,
 
@@ -488,7 +486,7 @@ class ChatbotService:
 
         self,
 
-        db: Session,
+        db: AsyncSession,
 
         message: str,
 
@@ -564,11 +562,9 @@ class ChatbotService:
 
 
 
-        db = SessionLocal()
+        async with async_session_maker() as db:
 
-        try:
-
-            has_docs = vector_repository.count_documents(db) > 0
+            has_docs = await vector_repository.count_documents(db) > 0
 
             if not has_docs:
 
@@ -581,10 +577,6 @@ class ChatbotService:
                 return await self._chat_rag_agent(db, message, terminal, wait_time_hours)
 
             return await self._chat_rag(db, message, terminal, wait_time_hours)
-
-        finally:
-
-            db.close()
 
 
 

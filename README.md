@@ -9,6 +9,7 @@
 ## 📚 Table of Contents
 
 - [Tech Stack](#-tech-stack)
+- [Async stack & DATABASE_URL](#async-stack--database_url)
 - [Database Structure](#-database-structure)
 - [Database migrations (Alembic)](#-database-migrations-alembic)
 - [Key Features](#-key-features)
@@ -27,19 +28,44 @@
 
 | Category | Technology |
 |----------|-----------|
-| **Framework** | FastAPI (Asynchronous API Support) |
+| **Framework** | FastAPI — 라우트는 `async def`, DB·외부 HTTP는 비동기 호출 |
 | **Database** | PostgreSQL |
-| **ORM** | SQLAlchemy 2.0 |
+| **DB 드라이버 (앱 런타임)** | **asyncpg** (`postgresql+asyncpg://`) |
+| **DB 드라이버 (마이그레이션·동기 스크립트)** | **psycopg2** — Alembic, `scripts/apply_airport_indexes.py` 등 |
+| **ORM** | SQLAlchemy 2.0 — `create_async_engine`, `async_sessionmaker`, `AsyncSession`, `expire_on_commit=False` |
 | **Migrations** | Alembic (로컬은 앱 기동 시 `upgrade head` 기본; 프로덕션은 환경 변수로 끄고 CI/CD에서 적용 권장) |
 | **Authentication** | JWT (JSON Web Token), bcrypt |
-| **External API** | 인천국제공항 공공데이터 OpenAPI |
+| **External API** | 인천국제공항 공공데이터 OpenAPI — **`httpx.AsyncClient`** (비동기 HTTP) |
 | **Email Service** | Gmail SMTP |
 | **AI Service** | OpenAI (GPT-4o-mini, text-embedding-3-small) |
 | **Vector Store** | PostgreSQL 배열 임베딩 / ChromaDB (선택) |
 | **Crawling** | httpx, BeautifulSoup4, lxml |
-| **Scheduler** | APScheduler (10분 주기 자동 갱신) |
+| **Scheduler** | APScheduler `BackgroundScheduler` — 주기 작업에서 `asyncio.run`으로 비동기 갱신 로직 실행 |
 | **Dependency Management** | uv |
 | **Environment** | python-dotenv |
+
+### ⚡ Async stack & DATABASE_URL
+
+앱은 **비동기 SQLAlchemy + asyncpg** 기준으로 동작합니다. 개념적으로는 아래와 같이 맞춰 두었습니다.
+
+| 동기(과거 패턴) | 이 저장소의 비동기 대응 |
+|----------------|------------------------|
+| psycopg2 / `create_engine` | **asyncpg** / `create_async_engine` |
+| `sessionmaker`, `Session` | `async_sessionmaker`, **`AsyncSession`** |
+| `def` 엔드포인트 | **`async def`** 엔드포인트 |
+| `db.scalars(stmt)` 등 | **`await db.scalars(stmt)`** (및 `execute`·`commit`·`flush`도 동일하게 `await`) |
+| 세션 기본 `expire_on_commit=True` | **`expire_on_commit=False`** (비동기 컨텍스트에서 지연 로딩 이슈 완화) |
+| 지연 로딩에 의존 | 관계가 필요하면 **`selectinload` 등으로 명시적 eager load** 권장 |
+| `time.sleep` / `requests` | `asyncio.sleep` / **`httpx`** (인천 OpenAPI는 `httpx.AsyncClient`) |
+
+**`DATABASE_URL` 처리**
+
+- `.env`에 **`postgresql://user:pass@host:5432/db`** 형태만 적어도 됩니다. 앱 기동 시 내부에서 **`postgresql+asyncpg://`** 로 바꿔 연결합니다.
+- 이미 **`postgresql+asyncpg://`** 를 쓰면 그대로 사용합니다.
+- **Alembic**과 **`scripts/apply_airport_indexes.py`**(psycopg2)는 동기 연결이 필요하므로, 실행 시 URL을 **`postgresql+psycopg2://`** 에 맞게 정규화합니다(`database.normalize_database_url_to_sync_psycopg2`).
+- 크롤·인덱싱 스크립트 `scripts/crawl_and_index.py`는 PostgreSQL 모드에서 **`async_session_maker`** 로 비동기 세션을 열고 문서를 적재합니다.
+
+**스케줄러**: APScheduler가 백그라운드 스레드에서 돌기 때문에, 비행편 갱신 job 안에서는 **`asyncio.run()`** 으로 한 번에 비동기 세션·서비스 로직을 실행합니다.
 
 ---
 
@@ -68,7 +94,9 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 **애플리케이션**: `main.py` lifespan에서 `run_alembic_on_app_startup()`을 호출합니다. 기본값(`RUN_ALEMBIC_ON_STARTUP` 미설정 또는 `true`)이면 기동 시 `head`까지 적용하고, **다중 인스턴스·오토스케일** 환경에서는 인스턴스가 동시에 `upgrade`를 돌리며 락·경합이 날 수 있으므로 `RUN_ALEMBIC_ON_STARTUP=false`로 끄고, **배포/릴리스 직전에** `uv run alembic upgrade head`만 실행하는 방식을 권장합니다.
 
-**인덱싱 스크립트** `scripts/crawl_and_index.py`는 기존처럼 Alembic `upgrade head`를 그대로 호출합니다(단발 스크립트이므로 앱과 달리 동시 실행 겹침 이슈가 적음).
+**인덱싱 스크립트** `scripts/crawl_and_index.py`는 기존처럼 Alembic `upgrade head`를 그대로 호출합니다(단발 스크립트이므로 앱과 달리 동시 실행 겹침 이슈가 적음). PostgreSQL 모드에서는 **비동기 세션**으로 `airport_documents`에 적재합니다.
+
+**Alembic과 `DATABASE_URL`**: Alembic은 동기 드라이버(psycopg2)로 마이그레이션을 실행합니다. `DATABASE_URL`이 `postgresql+asyncpg://` 이어도 `alembic/env.py`에서 **`postgresql+psycopg2://`** 로 바꿔 연결합니다.
 
 | 환경 변수 | 설명 |
 |-----------|------|
@@ -88,9 +116,9 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 실시간 모니터링과 자동 감지 로직을 통해 사용자 편의성과 정확한 알림을 제공합니다.
 
-* **실시간 API 연동**: 인천공항 공공데이터 OpenAPI를 통한 실제 비행편 정보 조회
+* **실시간 API 연동**: 인천공항 공공데이터 OpenAPI를 **`httpx` 비동기 클라이언트**로 호출하여 실제 비행편 정보 조회
 * **자동 데이터 채우기**: 비행편 등록 시 항공사, 공항, 게이트, 터미널 등 자동 입력
-* **스케줄러**: APScheduler를 통해 10분마다 활성 비행편 자동 갱신
+* **스케줄러**: APScheduler를 통해 10분마다 활성 비행편 자동 갱신(job 내부는 `asyncio.run` + 비동기 DB/API)
 * **변경 감지**: 게이트 변경, 터미널 변경, 지연, 결항을 자동으로 감지
 * **상태 관리**: 활성화/비활성화 상태로 모니터링 on/off 제어 가능
 * **권한 검증**: 모든 비행편 API에 JWT 인증 적용 및 본인 확인 로직
@@ -191,9 +219,10 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 ### 🚀 Performance & Reliability
 
-* **Transaction Management**: SQLAlchemy의 트랜잭션을 활용한 데이터 무결성 보장
+* **비동기 I/O**: FastAPI 이벤트 루프에서 DB(asyncpg)·인천 OpenAPI(httpx) 대기 시 스레드 풀에 맡기지 않고 논블로킹으로 처리
+* **Transaction Management**: `AsyncSession` 트랜잭션(`await commit` / `rollback`)으로 데이터 무결성 보장
 * **외부 API 에러 처리**: 인천공항 API 호출 실패 시에도 기본 정보로 등록 가능
-* **Scheduler 안정성**: 에러 발생 시에도 다음 주기에 정상 작동
+* **Scheduler 안정성**: 백그라운드 스레드에서 주기 실행; 개별 비행편 갱신 실패 시에도 다음 편·다음 주기에 영향 최소화
 * **이메일 재시도**: 전송 실패 시 is_sent=False로 기록하여 재시도 가능
 * **라우팅 최적화**: 고정 경로를 동적 경로보다 우선 배치하여 경로 충돌 방지
 
@@ -228,8 +257,9 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | 비즈니스 로직 | 구현 위치 | 방어 방식 |
 |---|---|---|
 | 10분마다 자동 갱신 | `scheduler_service.start` | APScheduler BackgroundScheduler |
-| 활성 비행편만 갱신 | `scheduler_service.refresh_active_flights` | is_active=True 필터 |
-| 오늘~모레 비행편만 조회 | `scheduler_service.refresh_active_flights` | flight_date 범위 필터 |
+| 비동기 갱신 실행 | `scheduler_service.refresh_active_flights` → `_refresh_active_flights_async` | 스레드에서 `asyncio.run`, `async_session_maker` + `flight_service.refresh_flight` |
+| 활성 비행편만 갱신 | `_refresh_active_flights_async` | is_active=True 필터 |
+| 오늘~모레 비행편만 조회 | `_refresh_active_flights_async` | flight_date 범위 필터 |
 
 ### 알림 관련
 
@@ -244,8 +274,8 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | 비즈니스 로직 | 구현 위치 | 방어 방식 |
 |---|---|---|
 | 문서 인덱싱 | `scripts/crawl_and_index.py` | 크롤링 + 파싱 + 임베딩 저장 |
-| 벡터 검색 (코사인) | `vector_repository.py` | PostgreSQL 배열 또는 Chroma |
-| 키워드 검색 | `vector_repository.py` | PostgreSQL ILIKE 또는 Chroma 메타데이터 |
+| 벡터 검색 (코사인) | `vector_repository.py` | PostgreSQL 배열(비동기 세션) 또는 Chroma |
+| 키워드 검색 | `vector_repository.py` | PostgreSQL ILIKE(비동기) 또는 Chroma 메타데이터 |
 | 에이전트 도구 호출 | `rag/agent/tools.py` | OpenAI function calling |
 | 모드 분기 | `chatbot_service.py` | 문서 존재 여부로 agent/rag/legacy 결정 |
 
@@ -328,6 +358,8 @@ uv run fastapi dev main.py
 
 ```ini
 # Database
+# 앱은 asyncpg로 연결합니다. postgresql:// 만 적어도 내부에서 postgresql+asyncpg:// 로 변환됩니다.
+# Alembic·psycopg2 스크립트는 동기 URL(postgresql+psycopg2)로 자동 정규화됩니다.
 DATABASE_URL=postgresql://user:password@localhost:5432/flight_alert
 
 # 앱 기동 시 Alembic 자동 적용 (로컬 true 권장; 프로덕션 다중 워커는 false + 배포 시 upgrade)
@@ -447,6 +479,12 @@ uv run python scripts/crawl_and_index.py --all
 * **Chroma**: `VECTOR_BACKEND=chroma`일 때 `CHROMA_PERSIST_DIR`로 저장 경로 지정 가능
 * **기본 경로**: 프로젝트 루트 `.chroma_airport` (`.gitignore`에 등록됨)
 
+### 9. `asyncpg` / `DATABASE_URL` 연결 오류
+
+* **증상**: 앱 기동 시 `asyncpg` 관련 연결 실패, 또는 드라이버를 찾을 수 없음
+* **확인**: `uv sync`로 **`asyncpg`** 설치 여부 확인. `DATABASE_URL` 호스트·포트·DB명·비밀번호가 PostgreSQL과 일치하는지 확인
+* **참고**: Alembic만 쓸 때는 psycopg2 경로이므로, 앱과 동일한 **`postgresql://...`** 호스트만 맞으면 됩니다. `postgresql+asyncpg://`를 직접 써도 앱은 그대로 사용합니다.
+
 ---
 
 ## 🚀 Future Roadmap
@@ -464,7 +502,7 @@ uv run python scripts/crawl_and_index.py --all
 * [x] **Alembic Migration**: DB 스키마 버전 관리 및 기동 시 `upgrade head` 선택 적용(`RUN_ALEMBIC_ON_STARTUP`)
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
-* [ ] **Test Automation**: Pytest를 이용한 유닛 테스트
+* [ ] **Test Automation**: Pytest를 이용한 유닛 테스트 (비동기 DB·`httpx` 모킹 포함 권장)
 
 ---
 
