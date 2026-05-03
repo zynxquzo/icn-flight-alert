@@ -4,11 +4,10 @@ Scheduler Service
 APScheduler를 사용한 주기적 비행편 갱신
 """
 
-import asyncio
 import logging
 from datetime import date, timedelta
 
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
@@ -18,12 +17,10 @@ class FlightScheduler:
     """비행편 자동 갱신 스케줄러"""
 
     def __init__(self):
-        self.scheduler = BackgroundScheduler()
+        # FastAPI(uvicorn)와 동일한 이벤트 루프에서 돌려야 asyncpg/SQLAlchemy 풀과 루프가 일치합니다.
+        # BackgroundScheduler + asyncio.run()은 별도 루프를 만들어 "different loop" 오류를 유발합니다.
+        self.scheduler = AsyncIOScheduler()
         self.is_running = False
-
-    def refresh_active_flights(self) -> None:
-        """활성화된 비행편 자동 갱신 (백그라운드 스레드에서 asyncio 이벤트 루프 실행)"""
-        asyncio.run(self._refresh_active_flights_async())
 
     async def _refresh_active_flights_async(self) -> None:
         from sqlalchemy import and_, select
@@ -102,7 +99,7 @@ class FlightScheduler:
             return
 
         self.scheduler.add_job(
-            func=self.refresh_active_flights,
+            func=self._refresh_active_flights_async,
             trigger=IntervalTrigger(minutes=interval_minutes),
             id="refresh_flights_job",
             name="비행편 자동 갱신",
