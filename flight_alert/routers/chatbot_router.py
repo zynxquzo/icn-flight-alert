@@ -14,30 +14,29 @@ from flight_alert.models.user import User
 from flight_alert.services.chatbot_service import chatbot_service
 
 
-router = APIRouter(
-    prefix="/chatbot",
-    tags=["Chatbot"]
-)
+router = APIRouter(prefix="/chatbot", tags=["Chatbot"])
 
 
 class ChatRequest(BaseModel):
     """챗봇 요청"""
+
     message: str
     terminal: str = "T1"
     wait_time_hours: float | None = None
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "message": "3시간 기다려야 하는데 뭐하면 좋을까요?",
                 "terminal": "T1",
-                "wait_time_hours": 3
+                "wait_time_hours": 3,
             }
         }
 
 
 class ChatResponse(BaseModel):
     """챗봇 응답"""
+
     message: str
     response: str
     mode: str = Field(

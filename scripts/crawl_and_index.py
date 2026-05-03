@@ -26,7 +26,10 @@ if str(ROOT) not in sys.path:
 
 import flight_alert.models  # noqa: F401, E402 — ORM 메타데이터에 airport_documents 등 등록
 from database import async_session_maker, run_alembic_upgrade  # noqa: E402
-from flight_alert.repositories.vector_repository import upsert_document, use_chroma_backend  # noqa: E402
+from flight_alert.repositories.vector_repository import (
+    upsert_document,
+    use_chroma_backend,
+)  # noqa: E402
 from flight_alert.services.crawler_service import (  # noqa: E402
     crawl_airport_facilities,
     crawl_airport_food,
@@ -112,7 +115,9 @@ async def main_async(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="인천공항 공식 페이지 크롤링 후 벡터 인덱싱")
+    parser = argparse.ArgumentParser(
+        description="인천공항 공식 페이지 크롤링 후 벡터 인덱싱"
+    )
     parser.add_argument(
         "--terminal",
         default="T1",
