@@ -5,13 +5,14 @@ User Schemas
 """
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserCreate(BaseModel):
     """회원가입 요청"""
     email: EmailStr
-    password: str
+    # bcrypt는 입력 비밀번호 바이트가 72를 넘으면 잘라내므로 max_length도 함께 제한
+    password: str = Field(..., min_length=8, max_length=72)
 
 
 class UserLogin(BaseModel):

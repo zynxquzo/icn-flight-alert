@@ -5,6 +5,7 @@ ICN Flight Alert API
 """
 
 import logging
+import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,10 +49,17 @@ app = FastAPI(
 )
 
 # 허용할 출처(프론트엔드 주소) 리스트
-origins = [
+# CORS_ALLOWED_ORIGINS 환경변수(콤마 구분)가 있으면 사용하고, 없으면 로컬 개발 기본값을 적용합니다.
+_default_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+_origins_raw = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+origins = (
+    [o.strip() for o in _origins_raw.split(",") if o.strip()]
+    if _origins_raw
+    else _default_origins
+)
 
 app.add_middleware(
     CORSMiddleware,

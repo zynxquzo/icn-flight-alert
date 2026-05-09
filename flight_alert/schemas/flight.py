@@ -44,6 +44,9 @@ class FlightResponse(BaseModel):
     is_active: bool
     created_at: datetime
     last_checked_at: datetime | None
+    # 인천공항 OpenAPI에서 운항 정보를 보강했는지 여부.
+    # False면 항공사·게이트·시간 등 부가 필드가 비어 있을 수 있음.
+    enriched: bool = True
 
     model_config = ConfigDict(from_attributes=True)
 

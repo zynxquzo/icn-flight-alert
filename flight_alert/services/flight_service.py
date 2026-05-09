@@ -131,6 +131,7 @@ class FlightService:
             flight_type=flight_data.flight_type.value,
             airport_code=None,
         )
+        enriched = bool(api_data)
 
         if not api_data:
             logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")
@@ -166,9 +167,12 @@ class FlightService:
         saved_flight = await flight_repository.save(db, flight)
         await db.commit()
 
+        # FlightResponse(from_attributes=True)가 transient 속성으로 enriched를 읽도록 부착
+        saved_flight.enriched = enriched
+
         logger.info(
             f"비행편 등록 완료: flight_pk={saved_flight.flight_pk}, "
-            f"flight_id={saved_flight.flight_id}"
+            f"flight_id={saved_flight.flight_id}, enriched={enriched}"
         )
         return saved_flight
 

@@ -42,7 +42,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(
+async def logout(
     token: str = Depends(get_bearer_token),
 ):
     """로그아웃

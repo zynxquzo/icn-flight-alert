@@ -75,7 +75,7 @@ async def chat(
     )
 
 
-@router.get("", tags=["Chatbot"])
+@router.get("")
 async def chatbot_info(_: Annotated[User, Depends(get_current_user)]):
     """챗봇 서비스 정보 (로그인 필수)"""
     return {
