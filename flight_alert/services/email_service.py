@@ -86,7 +86,41 @@ class EmailService:
         except Exception as e:
             logger.error(f"❌ 이메일 발송 실패: {e}")
             return False
-    
+
+    @classmethod
+    def send_simple_email(
+        cls,
+        to_email: str,
+        subject: str,
+        text_body: str,
+        html_inner: str | None = None,
+    ) -> bool:
+        """인증·재설정 등 단문 메일 (SMTP 미설정 시 False)."""
+        if not all([cls.SMTP_USERNAME, cls.SMTP_PASSWORD, cls.SMTP_FROM_EMAIL]):
+            logger.error("SMTP 환경 변수가 설정되지 않았습니다")
+            return False
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = cls.SMTP_FROM_EMAIL
+            msg["To"] = to_email
+            msg.attach(MIMEText(text_body, "plain", "utf-8"))
+            if html_inner:
+                wrapped = f"""<html><body style="font-family:Segoe UI,Arial,sans-serif;line-height:1.6">
+{html_inner}
+<p style="color:#666;font-size:12px;margin-top:24px">ICN Flight Alert</p>
+</body></html>"""
+                msg.attach(MIMEText(wrapped, "html", "utf-8"))
+            with smtplib.SMTP(cls.SMTP_HOST, cls.SMTP_PORT) as server:
+                server.starttls()
+                server.login(cls.SMTP_USERNAME, cls.SMTP_PASSWORD)
+                server.send_message(msg)
+            logger.info("✅ 단문 이메일 발송 성공: to=%s subject=%s", to_email, subject)
+            return True
+        except Exception as e:
+            logger.error("❌ 단문 이메일 발송 실패: %s", e)
+            return False
+
     @classmethod
     def _create_html_body(cls, message: str, flight_id: str = None) -> str:
         """HTML 이메일 본문 생성"""

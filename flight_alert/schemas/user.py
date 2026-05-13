@@ -25,6 +25,7 @@ class UserResponse(BaseModel):
     """사용자 정보 응답"""
     user_id: int
     email: str
+    email_verified: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -33,4 +34,18 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     """토큰 응답"""
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=10)
+    new_password: str = Field(..., min_length=8, max_length=72)

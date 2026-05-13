@@ -29,5 +29,13 @@ class UserRepository:
         """ID로 사용자 조회"""
         return await db.get(User, user_id)
 
+    async def update_password(self, db: AsyncSession, user: User, hashed_password: str) -> None:
+        user.password = hashed_password
+        await db.flush()
+
+    async def set_email_verified(self, db: AsyncSession, user: User, verified: bool) -> None:
+        user.email_verified = verified
+        await db.flush()
+
 
 user_repository = UserRepository()
