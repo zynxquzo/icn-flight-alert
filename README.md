@@ -34,7 +34,7 @@
 | **DB 드라이버 (마이그레이션·동기 스크립트)** | **psycopg2** — Alembic, `scripts/apply_airport_indexes.py` 등 |
 | **ORM** | SQLAlchemy 2.0 — `create_async_engine`, `async_sessionmaker`, `AsyncSession`, `expire_on_commit=False` |
 | **Migrations** | Alembic (로컬은 앱 기동 시 `upgrade head` 기본; 프로덕션은 환경 변수로 끄고 CI/CD에서 적용 권장) |
-| **Authentication** | JWT (JSON Web Token), bcrypt |
+| **Authentication** | JWT(액세스·만료 `JWT_EXPIRE_MINUTES`) + **리프레시 토큰**(불투명 문자열 SHA-256 저장·회전), bcrypt, 이메일 인증·비밀번호 재설정(SMTP 링크) |
 | **External API** | 인천국제공항 공공데이터 OpenAPI — **`httpx.AsyncClient`** (비동기 HTTP) |
 | **Email Service** | Gmail SMTP |
 | **AI Service** | OpenAI (GPT-4o-mini, text-embedding-3-small) |
@@ -75,6 +75,8 @@
 
 데이터 무결성을 위해 `User`, `Flight`, `FlightStatusLog`, `Notification` 간의 관계를 설계하였으며, JWT 인증을 통한 사용자별 비행편 관리를 지원합니다.
 
+`User`에는 **`email_verified`**(이메일 인증 여부)가 있으며, **`refresh_tokens`**(세션 갱신용), **`user_security_tokens`**(비밀번호 재설정·이메일 인증용 일회성 토큰) 테이블이 별도로 둡니다.
+
 RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운영되며, `VECTOR_BACKEND=postgres`(기본) 모드에서만 사용됩니다.
 
 ---
@@ -98,6 +100,11 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 **Alembic과 `DATABASE_URL`**: Alembic은 동기 드라이버(psycopg2)로 마이그레이션을 실행합니다. `DATABASE_URL`이 `postgresql+asyncpg://` 이어도 `alembic/env.py`에서 **`postgresql+psycopg2://`** 로 바꿔 연결합니다.
 
+**리비전 체인 (요약)**  
+`0001_baseline` 이후 **`0002_add_chat_messages`**(no-op 스텁: 일부 DB에만 기록된 리비전 ID와 맞추기 위함) → **`0002_auth_refresh_email`**(`email_verified`, `refresh_tokens`, `user_security_tokens` 등).
+
+**Windows 참고**: `alembic.ini`는 ConfigParser가 시스템 로케일(예: cp949)로 읽을 수 있으므로, **주석은 ASCII만** 사용합니다. UTF-8 특수문자·한글 주석이 있으면 `UnicodeDecodeError`가 날 수 있습니다.
+
 | 환경 변수 | 설명 |
 |-----------|------|
 | `RUN_ALEMBIC_ON_STARTUP` | `true`(기본): 앱 프로세스 기동 시 `alembic upgrade head` 실행. `false`: 건너뜀 — 이때는 배포 파이프라인 등에서 스키마를 맞춰야 함. |
@@ -110,7 +117,12 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 * **Security**: JWT 기반 인증과 `bcrypt` 암호화 알고리즘을 사용한 안전한 회원가입 및 로그인
 * **Authorization**: 본인이 등록한 비행편만 조회/수정/삭제 가능 (403 Forbidden)
-* **Token Management**: 30분 만료 시간이 적용된 JWT 토큰 발급, `jti` 기반 `POST /auth/logout` 블랙리스트(단일 프로세스), 만료·누락 시 `401` + `error.code` (`TOKEN_EXPIRED` 등)로 구분
+* **액세스·리프레시 토큰**: 로그인 시 **`access_token`** + **`refresh_token`** 발급. `POST /auth/refresh`로 액세스 재발급 시 리프레시는 **회전**(기존 행 폐기 후 새 토큰). `POST /auth/logout` 시 액세스 JWT는 `jti` **블랙리스트**, 해당 사용자의 리프레시 토큰은 **전부 폐기**
+* **액세스 JWT**: 기본 만료 `JWT_EXPIRE_MINUTES`(기본 30분). 만료·무효 시 `401` + `error.code` (`TOKEN_EXPIRED`, `TOKEN_INVALID`, `TOKEN_REVOKED`, 리프레시 실패 시 `REFRESH_INVALID` 등)
+* **이메일 인증**: 가입 시 `email_verified=false` 및( SMTP 설정 시) 인증 메일 발송, `GET /auth/verify-email?token=` 로 완료. `POST /auth/resend-verification`(로그인 필요)으로 재발송
+* **비밀번호 재설정**: `POST /auth/forgot-password`(응답 항상 204), `POST /auth/reset-password` 로 새 비밀번호 설정(성공 시 해당 사용자 리프레시 전부 폐기)
+* **선택**: `REQUIRE_EMAIL_VERIFICATION=true` 이면 **미인증 계정은 로그인 403**
+* **인증 메일·재설정 링크**: 프론트 주소는 **`FRONTEND_PUBLIC_URL`**(기본 `http://localhost:5173`)을 사용합니다.
 
 ### 📅 Advanced Flight Monitoring System
 
@@ -130,6 +142,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 * **알림 타입**: 게이트 변경, 터미널 변경, 지연, 결항 4가지 타입 지원
 * **전송 이력**: 모든 알림의 전송 성공/실패 여부 기록
 * **Gmail SMTP**: Gmail 앱 비밀번호를 통한 안전한 이메일 발송
+* **트랜잭션 메일**: 비행편 알림 외에 **이메일 인증·비밀번호 재설정** 안내에 `EmailService.send_simple_email` 사용(동일 SMTP 설정)
 
 ### 🤖 RAG-Powered AI Airport Assistant
 
@@ -195,6 +208,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 ┌─────────────────────────────────────────┐
 │    Repositories (Data Access)           │  ← DB / 벡터 저장소
 │  - user_repository.py                   │
+│  - token_repository.py                  │
 │  - flight_repository.py                 │
 │  - notification_repository.py           │
 │  - flight_status_log_repository.py      │
@@ -296,10 +310,15 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 | Method | Path | JWT 필요 | 비고 |
 |--------|------|:--------:|------|
-| `POST` | `/auth/signup` |  | 회원가입 |
-| `POST` | `/auth/login` |  | `access_token` 발급 |
-| `POST` | `/auth/logout` | ✅ | 현재 토큰 무효화(인메모리 블랙리스트), 응답 204 |
-| `GET` | `/me` | ✅ | 내 프로필 |
+| `POST` | `/auth/signup` |  | 회원가입 (`UserResponse`에 `email_verified` 포함) |
+| `POST` | `/auth/login` |  | `access_token` + **`refresh_token`** 발급 |
+| `POST` | `/auth/refresh` |  | 본문 `{ "refresh_token" }` → 새 액세스·리프레시(회전) |
+| `POST` | `/auth/logout` | ✅ | 액세스 블랙리스트 + 해당 사용자 리프레시 전부 폐기, 응답 204 |
+| `POST` | `/auth/forgot-password` |  | 비밀번호 재설정 메일(등록된 이메일만; 응답 항상 **204**) |
+| `POST` | `/auth/reset-password` |  | 본문 `token`, `new_password` |
+| `GET` | `/auth/verify-email` |  | 쿼리 `token` — 이메일 인증 완료 |
+| `POST` | `/auth/resend-verification` | ✅ | 인증 메일 재발송 |
+| `GET` | `/me` | ✅ | 내 프로필 (`email_verified` 포함) |
 | `POST` | `/flights` | ✅ | 등록 시 로그인 사용자에 연동 |
 | `GET` | `/flights` | ✅ | 선택 쿼리 `is_active` (boolean) |
 | `GET` | `/flights/{flight_pk}` | ✅ | 본인 아니면 **403** |
@@ -312,7 +331,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | `GET` | `/chatbot` | ✅ | 소개·환경 변수 안내 |
 | `POST` | `/chatbot/chat` | ✅ | 챗봇; 응답 `mode`, `sources` 포함 |
 
-프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 포함해야 합니다.
+프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 포함해야 합니다. 액세스 만료 시 **`POST /auth/refresh`**로 갱신한 뒤 재시도하는 방식을 권장합니다(별도 저장소 프론트엔드 README 참고).
 
 ### 프론트엔드 연동 (CORS)
 
@@ -369,6 +388,17 @@ DATABASE_URL=postgresql://user:password@localhost:5432/flight_alert
 JWT_SECRET_KEY=your-secret-key-here  # openssl rand -hex 32
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=30
+# JWT_REFRESH_EXPIRE_DAYS=14
+
+# 인증 메일·재설정 링크에 쓰는 프론트 베이스 URL (trailing slash 없이)
+# FRONTEND_PUBLIC_URL=http://localhost:5173
+
+# 가입 후 이메일 인증 없이는 로그인 불가 (기본: 미설정·false)
+# REQUIRE_EMAIL_VERIFICATION=true
+
+# 인증·재설정 토큰 유효 시간 (선택, 기본은 코드 내 상수)
+# EMAIL_VERIFY_TOKEN_EXPIRE_HOURS=24
+# PASSWORD_RESET_TOKEN_EXPIRE_HOURS=1
 
 # Incheon Airport API
 INCHEON_AIRPORT_API_KEY=your-api-key-here
@@ -485,6 +515,11 @@ uv run python scripts/crawl_and_index.py --all
 * **확인**: `uv sync`로 **`asyncpg`** 설치 여부 확인. `DATABASE_URL` 호스트·포트·DB명·비밀번호가 PostgreSQL과 일치하는지 확인
 * **참고**: Alembic만 쓸 때는 psycopg2 경로이므로, 앱과 동일한 **`postgresql://...`** 호스트만 맞으면 됩니다. `postgresql+asyncpg://`를 직접 써도 앱은 그대로 사용합니다.
 
+### 10. Alembic `Can't locate revision …` 또는 Windows에서 `alembic.ini` UnicodeDecodeError
+
+* **원인**: DB의 `alembic_version`과 저장소의 리비전 파일이 어긋나 있거나, `alembic.ini`에 UTF-8 전용 문자(예: em dash, 한글)가 있어 Windows 로케일(cp949)로 읽을 때 실패
+* **해결**: `uv run alembic current` 로 DB 버전 확인 후 `upgrade head` 또는 운영 정책에 맞게 `stamp` 조정. `alembic.ini` 주석은 ASCII만 유지
+
 ---
 
 ## 🚀 Future Roadmap
@@ -498,6 +533,7 @@ uv run python scripts/crawl_and_index.py --all
 * [x] **RAG / Agentic Chatbot**: 공항 공식 정보 크롤·임베딩·도구 호출 기반 챗봇
 * [x] **Exception Handling**: 커스텀 예외 및 전역 핸들러
 * [x] **Frontend (별도 저장소)**: Vite + React 클라이언트 연동
+* [x] **Refresh JWT & 이메일 인증·비밀번호 재설정**: 리프레시 토큰 회전, SMTP 링크, 선택적 `REQUIRE_EMAIL_VERIFICATION`
 * [ ] **Push Notification**: Firebase Cloud Messaging 연동
 * [x] **Alembic Migration**: DB 스키마 버전 관리 및 기동 시 `upgrade head` 선택 적용(`RUN_ALEMBIC_ON_STARTUP`)
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
