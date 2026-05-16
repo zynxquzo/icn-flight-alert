@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from flight_alert.exceptions import NotFoundException
 from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.repositories.notification_repository import notification_repository
+from flight_alert.services.flight_service import flight_service
 from flight_alert.schemas.notification import (
     NotificationListResponse,
     NotificationResponse,
@@ -66,6 +67,14 @@ class NotificationService:
             )
             for notif in notifications
         ]
+
+    async def check_flight_notifications(
+        self,
+        db: AsyncSession,
+        flight_pk: int,
+    ) -> dict:
+        """인천공항 API로 즉시 확인하고, 변경 시 알림·이메일을 생성합니다."""
+        return await flight_service.refresh_flight(db, flight_pk)
 
 
 notification_service = NotificationService()

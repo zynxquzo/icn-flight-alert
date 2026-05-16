@@ -141,6 +141,8 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 * **HTML 템플릿**: 보기 좋은 HTML 이메일 형식으로 제공
 * **알림 타입**: 게이트 변경, 터미널 변경, 지연, 결항 4가지 타입 지원
 * **전송 이력**: 모든 알림의 전송 성공/실패 여부 기록
+* **수동 감지**: `POST /notifications/flights/{flight_pk}/check` 또는 `POST /flights/{flight_pk}/refresh`로 인천공항 API를 즉시 조회·변경 감지 후 알림·메일 생성
+* **수동 조회**: `GET /notifications`, `GET /notifications/flights/{flight_pk}`로 DB에 저장된 알림 이력 조회
 * **Gmail SMTP**: Gmail 앱 비밀번호를 통한 안전한 이메일 발송
 * **트랜잭션 메일**: 비행편 알림 외에 **이메일 인증·비밀번호 재설정** 안내에 `EmailService.send_simple_email` 사용(동일 SMTP 설정)
 
@@ -280,6 +282,8 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | 비즈니스 로직 | 구현 위치 | 방어 방식 |
 |---|---|---|
 | 본인 알림·본인 비행편만 조회 | `notification_router` | JWT + 비행편 소유자 검증 |
+| 저장된 알림 이력 수동 조회 | `notification_service.read_*_notifications` | GET `/notifications` 계열 |
+| 수동 변경 감지·알림 생성 | `notification_router` + `flight_service.refresh_flight` | POST `/notifications/flights/{flight_pk}/check` (refresh와 동일 로직) |
 | 알림 타입별 필터링 | `notification_service.read_user_notifications` | notification_type 필터 |
 | 전송 성공/실패 기록 | `email_service.send_notification_email` | is_sent boolean 플래그 |
 
@@ -326,8 +330,9 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | `PATCH` | `/flights/{flight_pk}/status` | ✅ | `is_active` 변경, 본인 **403** |
 | `POST` | `/flights/{flight_pk}/refresh` | ✅ | 수동 갱신, 본인 **403** |
 | `GET` | `/flights/{flight_pk}/logs` | ✅ | 변경 이력, `change_type` 선택 필터, 본인만 |
-| `GET` | `/notifications` | ✅ | 로그인 사용자 이메일 기준 알림, `notification_type` 선택 필터 |
-| `GET` | `/notifications/flights/{flight_pk}` | ✅ | 해당 비행편 알림 목록, 본인만 |
+| `GET` | `/notifications` | ✅ | 저장된 알림 이력 수동 조회, `notification_type` 선택 필터 |
+| `GET` | `/notifications/flights/{flight_pk}` | ✅ | 해당 비행편 알림 이력 수동 조회, 본인만 |
+| `POST` | `/notifications/flights/{flight_pk}/check` | ✅ | 알림 수동 감지(인천 API·변경 시 알림·메일), 본인만, 응답은 refresh와 동일 |
 | `GET` | `/chatbot` | ✅ | 소개·환경 변수 안내 |
 | `POST` | `/chatbot/chat` | ✅ | 챗봇; 응답 `mode`, `sources` 포함 |
 

@@ -32,6 +32,25 @@ async def read_flight_notifications(
     return await notification_service.read_flight_notifications(db, flight_pk)
 
 
+@router.post("/flights/{flight_pk}/check")
+async def check_flight_notifications(
+    flight_pk: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """알림 수동 감지: 인천공항 API로 즉시 확인하고, 변경 시 알림·이메일을 생성합니다.
+
+    `POST /flights/{flight_pk}/refresh`와 동일한 처리입니다.
+    """
+    flight = await flight_service.read_flight_by_id(db, flight_pk)
+    if flight.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="본인의 비행편만 알림 감지를 실행할 수 있습니다.",
+        )
+    return await notification_service.check_flight_notifications(db, flight_pk)
+
+
 @router.get("", response_model=list[NotificationResponse])
 async def read_user_notifications(
     current_user: User = Depends(get_current_user),
@@ -41,7 +60,7 @@ async def read_user_notifications(
     ),
     db: AsyncSession = Depends(get_db),
 ):
-    """로그인한 사용자의 모든 알림 조회"""
+    """로그인한 사용자의 저장된 알림 이력 수동 조회"""
     return await notification_service.read_user_notifications(
         db, current_user.email, notification_type
     )
