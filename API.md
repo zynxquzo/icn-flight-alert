@@ -125,7 +125,7 @@
 Authorization: Bearer {access_token}
 ```
 
-**인증 필요**: `/me`, `POST /auth/logout`, `GET /notifications`, `GET /notifications/flights/{flight_pk}`, `POST/GET/PATCH/DELETE /flights...`, `GET /flights/{flight_pk}/logs`, `GET /chatbot`, `POST /chatbot/chat`.
+**인증 필요**: `/me`, `POST /auth/logout`, `GET /notifications`, `GET /notifications/flights/{flight_pk}`, `POST /notifications/flights/{flight_pk}/check`, `POST/GET/PATCH/DELETE /flights...`, `GET /flights/{flight_pk}/logs`, `GET /chatbot`, `POST /chatbot/chat`.
 
 **인증 불필요**: `/`, `/health`, `/auth/signup`, `/auth/login`.
 
@@ -464,7 +464,7 @@ Authorization: Bearer {access_token}
 
 **Endpoint**: `POST /flights/{flight_pk}/refresh`
 
-**설명**: 인천공항 API로 즉시 갱신하고, 게이트·터미널·지연·상태(결항 시 알림) 등 변경을 감지해 로그·알림·메일을 처리합니다.
+**설명**: 인천공항 API로 즉시 갱신하고, 게이트·터미널·지연·상태(결항 시 알림) 등 변경을 감지해 로그·알림·메일을 처리합니다. 동일 처리는 **`POST /notifications/flights/{flight_pk}/check`**(6.2)에서도 호출할 수 있습니다.
 
 **Headers**:
 
@@ -568,11 +568,11 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 6.1 비행편별 알림 목록
+### 6.1 비행편별 알림 이력 조회
 
 **Endpoint**: `GET /notifications/flights/{flight_pk}`
 
-**설명**: 해당 `flight_pk`에 연결된 알림 이력을 조회합니다. **로그인 필수**, 해당 비행편 소유자만 호출할 수 있습니다.
+**설명**: 해당 `flight_pk`에 연결된 **저장된 알림 이력**을 수동 조회합니다. **로그인 필수**, 해당 비행편 소유자만 호출할 수 있습니다. 인천공항 API로 즉시 변경을 확인하려면 §6.2를 사용하세요.
 
 **Headers**:
 
@@ -610,11 +610,64 @@ Authorization: Bearer {access_token}
 
 ---
 
-### 6.2 로그인 사용자 알림 목록
+### 6.2 비행편 알림 수동 감지
+
+**Endpoint**: `POST /notifications/flights/{flight_pk}/check`
+
+**설명**: 인천공항 API로 해당 비행편을 **즉시 확인**하고, 게이트·터미널·지연·결항 등 변경을 감지해 `FlightStatusLog`·`Notification` 저장 및 이메일 발송을 수행합니다. **로그인 필수**, 해당 비행편 소유자만 호출할 수 있습니다.
+
+**처리 내용**은 `POST /flights/{flight_pk}/refresh`(§5.6)와 **동일**합니다(`flight_service.refresh_flight` 재사용).
+
+**Headers**:
+
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters**:
+
+| 이름 | 타입 | 필수 |
+| :--- | :--- | :--- |
+| `flight_pk` | integer | 예 |
+
+**Response (200)**: §5.6과 동일한 `dict` (`flight_pk`, `changes_detected`, `changes`, `updated_at`).
+
+```json
+{
+  "flight_pk": 10,
+  "changes_detected": true,
+  "changes": [
+    {
+      "field": "gate_number",
+      "old_value": "109",
+      "new_value": "114",
+      "change_type": "gate_change"
+    }
+  ],
+  "updated_at": "2026-04-15T12:00:00"
+}
+```
+
+| 필드 | 설명 |
+| :--- | :--- |
+| `changes_detected` | 변경 1건 이상 여부 |
+| `changes` | 변경 메타 배열 (`field`, `old_value`, `new_value`, `change_type`) |
+| `updated_at` | 갱신 시각 (`last_checked_at`) |
+
+#### 에러 응답 (Error Response)
+
+| 상태 코드 | 발생 상황 |
+| :--- | :--- |
+| **401** | 미인증·토큰 만료 등 (§1.2 C) |
+| **403** | 타인 소유 `flight_pk`에 대한 알림 감지 시도 |
+
+---
+
+### 6.3 로그인 사용자 알림 이력 조회
 
 **Endpoint**: `GET /notifications`
 
-**설명**: JWT로 식별된 사용자 이메일 기준으로, 등록한 비행편들에 대한 알림을 모읍니다.
+**설명**: JWT로 식별된 사용자 이메일 기준으로, 등록한 비행편들에 대한 **저장된 알림 이력**을 수동 조회합니다.
 
 **Headers**:
 
