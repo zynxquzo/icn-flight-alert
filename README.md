@@ -378,6 +378,15 @@ uv run python scripts/crawl_and_index.py --facilities
 uv run fastapi dev main.py
 ```
 
+### 테스트 (pytest)
+
+```bash
+uv sync --group dev
+uv run pytest -q
+```
+
+`tests/` 에서 비행편 갱신·지연 알림 조건, JWT 블랙리스트·리프레시 회전, 인천 API 응답 파싱을 검증합니다. CI는 `.github/workflows/test.yml` 을 참고하세요.
+
 ### 환경 변수 설정 예시 (`.env`)
 
 ```ini
@@ -543,7 +552,7 @@ uv run python scripts/crawl_and_index.py --all
 * [x] **Alembic Migration**: DB 스키마 버전 관리 및 기동 시 `upgrade head` 선택 적용(`RUN_ALEMBIC_ON_STARTUP`)
 * [ ] **SMS Notification**: Twilio를 통한 문자 알림
 * [ ] **Deployment**: Render / Railway / Fly.io 배포
-* [ ] **Test Automation**: Pytest를 이용한 유닛 테스트 (비동기 DB·`httpx` 모킹 포함 권장)
+* [x] **Test Automation**: Pytest 유닛 테스트 (`tests/` — `flight_service`, `auth_service`, `incheon_api_service`)
 
 ---
 

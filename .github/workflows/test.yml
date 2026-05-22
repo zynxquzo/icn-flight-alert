@@ -1,0 +1,29 @@
+name: Backend tests
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run pytest
+        env:
+          JWT_SECRET_KEY: ci-test-jwt-secret-key-not-for-production-use
+          INCHEON_AIRPORT_API_KEY: test-key
+        run: uv run pytest -q
