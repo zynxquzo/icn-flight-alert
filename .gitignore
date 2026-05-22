@@ -22,3 +22,5 @@ Thumbs.db
 
 # Chroma RAG (VECTOR_BACKEND=chroma)
 .chroma_airport
+
+.claude
