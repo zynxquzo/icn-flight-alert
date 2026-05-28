@@ -91,7 +91,7 @@ async def _add_notification_and_email(
         notification_type=notification_type,
         message=message,
         sent_to=flight.user_email,
-        sent_at=datetime.now(timezone.utc),
+        sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
         is_sent=False,
     )
     db.add(notification)
@@ -142,6 +142,7 @@ class FlightService:
                 flight_date=flight_data.flight_date,
                 flight_type=flight_data.flight_type.value,
                 is_active=True,
+                api_sync_status="failed",
             )
         else:
             flight = Flight(
@@ -162,6 +163,7 @@ class FlightService:
                 carousel=api_data.get("carousel"),
                 exit_number=api_data.get("exitnumber"),
                 is_active=True,
+                api_sync_status="ok",
             )
 
         saved_flight = await flight_repository.save(db, flight)
@@ -271,10 +273,12 @@ class FlightService:
             flight.chkin_range = api_data.get("chkinrange")
             flight.carousel = api_data.get("carousel")
             flight.exit_number = api_data.get("exitnumber")
+            flight.api_sync_status = "ok"
         else:
+            flight.api_sync_status = "failed"
             logger.warning(f"API 호출 실패 - 기존 데이터 유지: flight_pk={flight_pk}")
 
-        flight.last_checked_at = datetime.now(timezone.utc)
+        flight.last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         changes = []
 

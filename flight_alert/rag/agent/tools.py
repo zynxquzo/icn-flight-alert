@@ -92,4 +92,31 @@ def openai_tool_specs() -> list[dict[str, Any]]:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "search_airport_docs_hybrid",
+                "description": (
+                    "벡터 유사도와 키워드 일치를 결합한 하이브리드 검색입니다. "
+                    "벡터 검색 결과가 불충분하거나 특정 명칭이 포함된 복합 질문에 사용하세요."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "검색 질의",
+                        },
+                        "top_k": {
+                            "type": "integer",
+                            "description": "반환할 최대 문서 수",
+                            "default": 6,
+                        },
+                        "category": {"type": "string"},
+                        "terminal": {"type": "string"},
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
     ]

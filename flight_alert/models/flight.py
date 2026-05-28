@@ -61,6 +61,12 @@ class Flight(Base):
         DateTime, server_default=func.now(), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    # API 동기화 상태: ok | failed | pending | manual
+    api_sync_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # 읽기 전용 공유 링크 토큰 (64자 hex, nullable)
+    share_token: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
 
     # Relationships
     status_logs: Mapped[list["FlightStatusLog"]] = relationship(

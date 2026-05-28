@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import logging
 import sys
 from pathlib import Path
@@ -54,16 +55,23 @@ def ensure_schema() -> None:
         logger.info("DB 스키마 확인·생성 완료 (airport_documents 포함)")
 
 
+def _compute_content_hash(doc: dict) -> str:
+    """title + content의 SHA-256 hex digest (64자)."""
+    raw = (doc.get("title") or "") + "\n" + (doc.get("content") or "")
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 async def _index_docs(docs: list[dict], label: str) -> int:
     if not docs:
         logger.warning("%s: 파싱된 문서가 없습니다.", label)
         return 0
     n = 0
+    skipped = 0
     if use_chroma_backend():
         for doc in docs:
             text = build_embedding_text(doc)
             emb = generate_embedding_sync(text)
-            payload = {**doc, "embedding": emb}
+            payload = {**doc, "embedding": emb, "content_hash": _compute_content_hash(doc)}
             await upsert_document(None, payload)
             n += 1
         logger.info("%s: %s개 문서 인덱싱 완료 (Chroma)", label, n)
@@ -72,16 +80,18 @@ async def _index_docs(docs: list[dict], label: str) -> int:
     async with async_session_maker() as db:
         try:
             for doc in docs:
+                new_hash = _compute_content_hash(doc)
                 text = build_embedding_text(doc)
                 emb = generate_embedding_sync(text)
-                payload = {**doc, "embedding": emb}
-                await upsert_document(db, payload)
+                payload = {**doc, "embedding": emb, "content_hash": new_hash}
+                result = await upsert_document(db, payload)
+                # content_hash가 같으면 upsert_document 내부에서 임베딩 재사용
                 n += 1
             await db.commit()
         except Exception:
             await db.rollback()
             raise
-    logger.info("%s: %s개 문서 인덱싱 완료", label, n)
+    logger.info("%s: %s개 문서 인덱싱 완료 (건너뜀: %s)", label, n, skipped)
     return n
 
 

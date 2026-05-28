@@ -41,6 +41,8 @@ class AirportDocument(Base):
 
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # 증분 크롤: title+content의 SHA-256 (64자 hex). 변경 없으면 임베딩 재생성 생략
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

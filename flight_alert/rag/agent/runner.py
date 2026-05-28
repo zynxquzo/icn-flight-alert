@@ -56,6 +56,7 @@ async def run_rag_agent(
     user_message: str,
     default_terminal: str,
     wait_time_hours: float | int | None,
+    user_context: str = "",
 ) -> tuple[str, list[dict[str, Any]], list[str]]:
     """최종 답변, 출처 목록, 호출된 도구 이름 순서."""
     model = _agent_model()
@@ -65,17 +66,19 @@ async def run_rag_agent(
     system = """당신은 인천국제공항 안내 에이전트입니다.
 
 규칙:
-1) 사용자 질문에 답하기 전에 반드시 도구 `search_airport_docs`로 문서 DB를 검색하세요. 결과가 부족하면 `relax_terminal=true`로 재검색하거나 `search_airport_docs_keyword`를 사용할 수 있습니다.
+1) 사용자 질문에 답하기 전에 반드시 도구 `search_airport_docs`로 문서 DB를 검색하세요. 결과가 부족하면 `relax_terminal=true`로 재검색하거나 `search_airport_docs_hybrid`를 사용할 수 있습니다.
 2) 도구 결과에 없는 구체적 사실(층·시간·전화 등)은 지어내지 마세요. 없으면 안내 데스크나 공항 공식 채널을 안내하세요.
 3) 한국어로 간결·친절하게 답하고, 가능하면 터미널·층·운영시간을 검색 결과에서만 인용하세요.
-4) 최종 답변 마지막에 한 줄로 `참고:` 뒤에 사용한 문서 제목을 쉼표로 나열하세요."""
+4) 최종 답변 마지막에 한 줄로 `참고:` 뒤에 사용한 문서 제목을 쉼표로 나열하세요.
+5) 사용자 등록 비행편 정보가 제공된 경우 이를 활용해 개인화된 답변을 하세요."""
 
+    ctx_section = f"\n\n{user_context}" if user_context else ""
     user_blob = f"""사용자 질문:
 {user_message}
 
 컨텍스트:
 - 사용자 기본 터미널: {default_terminal}
-- 대기 시간(시간): {_wait_str(wait_time_hours)}
+- 대기 시간(시간): {_wait_str(wait_time_hours)}{ctx_section}
 """
 
     messages: list[dict[str, Any]] = [

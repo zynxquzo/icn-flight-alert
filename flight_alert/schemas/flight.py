@@ -47,6 +47,10 @@ class FlightResponse(BaseModel):
     # 인천공항 OpenAPI에서 운항 정보를 보강했는지 여부.
     # False면 항공사·게이트·시간 등 부가 필드가 비어 있을 수 있음.
     enriched: bool = True
+    # API 동기화 상태: ok | failed | pending | manual
+    api_sync_status: str | None = None
+    # 읽기 전용 공유 링크 토큰 (공유 중이면 값 있음)
+    share_token: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

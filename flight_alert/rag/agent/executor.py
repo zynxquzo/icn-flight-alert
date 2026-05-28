@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from flight_alert.repositories import vector_repository
+from flight_alert.repositories.vector_repository import search_hybrid_documents
 from flight_alert.services.embedding_service import generate_embedding
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,31 @@ async def execute_agent_tool(
             d = _doc_public_dict(doc)
             sources = [{"doc_id": doc.doc_id, "title": doc.title, "source_url": doc.source_url}]
             return json.dumps({"document": d, "found": True}, ensure_ascii=False), sources
+
+        if name == "search_airport_docs_hybrid":
+            q = (args.get("query") or "").strip()
+            if not q:
+                return json.dumps({"documents": [], "error": "empty_query"}, ensure_ascii=False), []
+            top_k = _parse_int(args.get("top_k"), 6, 1, 20)
+            category = (args.get("category") or "").strip() or None
+            term_arg = (args.get("terminal") or "").strip().upper() or None
+            terminal = term_arg if term_arg in ("T1", "T2", "CONCOURSE") else default_terminal
+
+            emb = await generate_embedding(q)
+            docs = await search_hybrid_documents(
+                db,
+                emb,
+                q,
+                top_k=top_k,
+                category=category,
+                terminal=terminal,
+            )
+            payload = {"documents": [_doc_public_dict(d) for d in docs]}
+            sources = [
+                {"doc_id": d.doc_id, "title": d.title, "source_url": d.source_url}
+                for d in docs
+            ]
+            return json.dumps(payload, ensure_ascii=False), sources
 
         return json.dumps({"error": f"unknown_tool:{name}"}, ensure_ascii=False), []
     except Exception as e:
