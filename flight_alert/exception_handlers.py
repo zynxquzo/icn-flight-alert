@@ -82,15 +82,37 @@ def register_exception_handlers(app):
     
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
-        """예상치 못한 에러 처리"""
+        """예상치 못한 에러 처리.
+
+        @app.exception_handler(Exception)은 Starlette 내부에서 ServerErrorMiddleware에
+        등록되므로 CORSMiddleware 바깥에서 실행됩니다. 따라서 CORS 헤더를 여기서 직접
+        추가해야 브라우저 CORS 오류가 발생하지 않습니다.
+        """
+        import traceback, os
         logger.error(f"Unexpected error: {str(exc)}", exc_info=True)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "success": False,
-                "error": {
-                    "code": "INTERNAL_SERVER_ERROR",
-                    "message": "An unexpected error occurred"
-                }
+        content: dict = {
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
             }
+        }
+        if os.getenv("DEBUG", "").lower() in ("1", "true"):
+            content["error"]["detail"] = traceback.format_exc()
+        response = JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=content,
         )
+        origin = request.headers.get("origin")
+        if origin:
+            import os
+            allowed_raw = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+            allowed = (
+                [o.strip() for o in allowed_raw.split(",") if o.strip()]
+                if allowed_raw
+                else ["http://localhost:5173", "http://127.0.0.1:5173"]
+            )
+            if origin in allowed:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
