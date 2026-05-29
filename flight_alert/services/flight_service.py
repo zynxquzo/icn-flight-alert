@@ -6,7 +6,7 @@ from datetime import datetime, date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from flight_alert.exceptions import NotFoundException
+from flight_alert.exceptions import NotFoundException, BadRequestException
 from flight_alert.models.flight import Flight
 from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.services.email_service import email_service
@@ -131,50 +131,41 @@ class FlightService:
             flight_type=flight_data.flight_type.value,
             airport_code=None,
         )
-        enriched = bool(api_data)
-
         if not api_data:
-            logger.warning(f"API 호출 실패 - 기본 정보만 저장: {flight_data.flight_id}")
-            flight = Flight(
-                user_id=user_id,
-                user_email=user_email,
-                flight_id=flight_data.flight_id,
-                flight_date=flight_data.flight_date,
-                flight_type=flight_data.flight_type.value,
-                is_active=True,
-                api_sync_status="failed",
+            raise BadRequestException(
+                f"인천공항 운항 항공편에서 '{flight_data.flight_id}'을(를) 찾을 수 없습니다. "
+                "인천공항 출발/도착 항공편만 등록할 수 있습니다."
             )
-        else:
-            flight = Flight(
-                user_id=user_id,
-                user_email=user_email,
-                flight_id=api_data.get("flightId"),
-                flight_date=flight_data.flight_date,
-                flight_type=flight_data.flight_type.value,
-                airline=api_data.get("airline"),
-                airport=api_data.get("airport"),
-                airport_code=api_data.get("airportCode"),
-                terminal_id=api_data.get("terminalid"),
-                gate_number=api_data.get("gatenumber"),
-                schedule_date_time=api_data.get("scheduleDateTime"),
-                estimated_date_time=api_data.get("estimatedDateTime"),
-                remark=api_data.get("remark"),
-                chkin_range=api_data.get("chkinrange"),
-                carousel=api_data.get("carousel"),
-                exit_number=api_data.get("exitnumber"),
-                is_active=True,
-                api_sync_status="ok",
-            )
+
+        flight = Flight(
+            user_id=user_id,
+            user_email=user_email,
+            flight_id=api_data.get("flightId"),
+            flight_date=flight_data.flight_date,
+            flight_type=flight_data.flight_type.value,
+            airline=api_data.get("airline"),
+            airport=api_data.get("airport"),
+            airport_code=api_data.get("airportCode"),
+            terminal_id=api_data.get("terminalid"),
+            gate_number=api_data.get("gatenumber"),
+            schedule_date_time=api_data.get("scheduleDateTime"),
+            estimated_date_time=api_data.get("estimatedDateTime"),
+            remark=api_data.get("remark"),
+            chkin_range=api_data.get("chkinrange"),
+            carousel=api_data.get("carousel"),
+            exit_number=api_data.get("exitnumber"),
+            is_active=True,
+            api_sync_status="ok",
+        )
 
         saved_flight = await flight_repository.save(db, flight)
         await db.commit()
 
-        # FlightResponse(from_attributes=True)가 transient 속성으로 enriched를 읽도록 부착
-        saved_flight.enriched = enriched
+        saved_flight.enriched = True
 
         logger.info(
             f"비행편 등록 완료: flight_pk={saved_flight.flight_pk}, "
-            f"flight_id={saved_flight.flight_id}, enriched={enriched}"
+            f"flight_id={saved_flight.flight_id}"
         )
         return saved_flight
 
