@@ -4,15 +4,19 @@ Exception Handlers
 예외 처리 핸들러
 """
 
+import logging
+import os
+import traceback
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
+
 from flight_alert.exceptions import (
     NotFoundException,
     BadRequestException,
     APIException,
     UnauthorizedException,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +92,6 @@ def register_exception_handlers(app):
         등록되므로 CORSMiddleware 바깥에서 실행됩니다. 따라서 CORS 헤더를 여기서 직접
         추가해야 브라우저 CORS 오류가 발생하지 않습니다.
         """
-        import traceback, os
         logger.error(f"Unexpected error: {str(exc)}", exc_info=True)
         content: dict = {
             "success": False,
@@ -105,7 +108,6 @@ def register_exception_handlers(app):
         )
         origin = request.headers.get("origin")
         if origin:
-            import os
             allowed_raw = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
             allowed = (
                 [o.strip() for o in allowed_raw.split(",") if o.strip()]
