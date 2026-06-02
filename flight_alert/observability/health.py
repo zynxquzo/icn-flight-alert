@@ -61,16 +61,7 @@ async def build_health_payload() -> dict:
         for name, c in checks.items()
         if c.get("status") == "fail"
     ]
-    if failed:
-        overall = "unhealthy"
-    elif any(c.get("status") == "skipped" for c in (redis_check,)):
-        overall = "healthy"
-    else:
-        overall = "healthy"
-
-    # DB 실패만 degraded가 아니라 unhealthy
-    if db_check.get("status") == "fail":
-        overall = "unhealthy"
+    overall = "unhealthy" if failed else "healthy"
 
     return {
         "status": overall,
