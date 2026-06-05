@@ -5,7 +5,7 @@ Flight Schemas
 """
 
 from datetime import datetime, date
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 
 
