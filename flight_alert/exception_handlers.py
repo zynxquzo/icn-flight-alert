@@ -12,9 +12,9 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 
 from flight_alert.exceptions import (
-    NotFoundException,
-    BadRequestException,
     APIException,
+    BadRequestException,
+    NotFoundException,
     UnauthorizedException,
 )
 
