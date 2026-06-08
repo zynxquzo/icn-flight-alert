@@ -21,7 +21,7 @@ class NotificationResponse(BaseModel):
     """알림 상세 응답"""
     notification_id: int
     flight_pk: int
-    notification_type: str
+    notification_type: NotificationTypeEnum
     message: str | None
     sent_to: str | None
     sent_at: datetime | None
@@ -35,7 +35,7 @@ class NotificationListResponse(BaseModel):
     """알림 목록 응답 (간소화된 정보)"""
     notification_id: int
     flight_pk: int
-    notification_type: str
+    notification_type: NotificationTypeEnum
     message: str | None
     sent_at: datetime | None
     is_sent: bool
