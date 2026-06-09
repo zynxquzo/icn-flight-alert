@@ -11,6 +11,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+try:
+    import sentry_sdk as _sentry_sdk
+    _SENTRY_AVAILABLE = True
+except ImportError:
+    _SENTRY_AVAILABLE = False
+
 request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
@@ -23,12 +29,8 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         rid = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         token = request_id_ctx.set(rid)
         request.state.request_id = rid
-        try:
-            import sentry_sdk
-
-            sentry_sdk.set_tag("request_id", rid)
-        except ImportError:
-            pass
+        if _SENTRY_AVAILABLE:
+            _sentry_sdk.set_tag("request_id", rid)
         try:
             response = await call_next(request)
         finally:
