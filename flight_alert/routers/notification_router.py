@@ -9,6 +9,7 @@ from flight_alert.models.user import User
 from flight_alert.schemas.notification import (
     NotificationListResponse,
     NotificationResponse,
+    NotificationTypeEnum,
 )
 from flight_alert.services.flight_service import flight_service
 from flight_alert.services.notification_service import notification_service
@@ -54,7 +55,7 @@ async def check_flight_notifications(
 @router.get("", response_model=list[NotificationResponse])
 async def read_user_notifications(
     current_user: User = Depends(get_current_user),
-    notification_type: str | None = Query(
+    notification_type: NotificationTypeEnum | None = Query(
         None,
         description="알림 타입 필터 (delay/gate_change/cancel/terminal_change)",
     ),
@@ -62,5 +63,5 @@ async def read_user_notifications(
 ):
     """로그인한 사용자의 저장된 알림 이력 수동 조회"""
     return await notification_service.read_user_notifications(
-        db, current_user.email, notification_type
+        db, current_user.email, notification_type.value if notification_type else None
     )
