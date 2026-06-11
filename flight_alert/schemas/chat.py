@@ -50,13 +50,14 @@ class SessionChatRequest(BaseModel):
     message: str
     wait_time_hours: float | None = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "탑승 게이트가 어디로 바뀌었나요?",
                 "wait_time_hours": 2,
             }
         }
+    )
 
 
 class FeedbackRequest(BaseModel):
