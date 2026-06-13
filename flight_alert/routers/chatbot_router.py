@@ -4,7 +4,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -32,14 +32,15 @@ class ChatRequest(BaseModel):
     terminal: str = "T1"
     wait_time_hours: float | None = None
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "message": "3시간 기다려야 하는데 뭐하면 좋을까요?",
                 "terminal": "T1",
                 "wait_time_hours": 3,
             }
         }
+    )
 
 
 class ChatResponse(BaseModel):
