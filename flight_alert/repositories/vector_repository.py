@@ -6,14 +6,14 @@ from __future__ import annotations
 import math
 import os
 from datetime import datetime, timezone
-from typing import Any, Optional, Union
+from typing import Any
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from flight_alert.models.airport_document import AirportDocument
 
-AirportDocLike = Union[AirportDocument, Any]
+AirportDocLike = AirportDocument | Any
 
 
 def use_chroma_backend() -> bool:
@@ -93,8 +93,8 @@ async def search_similar_documents(
     query_embedding: list[float],
     *,
     top_k: int = 5,
-    category: Optional[str] = None,
-    terminal: Optional[str] = None,
+    category: str | None = None,
+    terminal: str | None = None,
 ) -> list[AirportDocLike]:
     if use_chroma_backend():
         from flight_alert.repositories.chroma_rag_store import chroma_search_similar
@@ -157,8 +157,8 @@ async def search_keyword_documents(
     query: str,
     *,
     top_k: int = 8,
-    category: Optional[str] = None,
-    terminal: Optional[str] = None,
+    category: str | None = None,
+    terminal: str | None = None,
 ) -> list[AirportDocLike]:
     if use_chroma_backend():
         from flight_alert.repositories.chroma_rag_store import chroma_search_keyword
@@ -199,8 +199,8 @@ async def search_hybrid_documents(
     top_k: int = 6,
     vector_weight: float = 0.65,
     keyword_weight: float = 0.35,
-    category: Optional[str] = None,
-    terminal: Optional[str] = None,
+    category: str | None = None,
+    terminal: str | None = None,
 ) -> list[AirportDocLike]:
     """벡터 유사도 + 키워드 ILIKE 가중 합산 하이브리드 검색.
 
