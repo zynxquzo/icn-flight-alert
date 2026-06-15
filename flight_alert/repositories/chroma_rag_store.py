@@ -11,7 +11,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +166,8 @@ def chroma_search_similar(
     query_embedding: list[float],
     *,
     top_k: int = 5,
-    category: Optional[str] = None,
-    terminal: Optional[str] = None,
+    category: str | None = None,
+    terminal: str | None = None,
 ) -> list[AirportDocView]:
     col = _get_collection()
     if col.count() == 0:
@@ -230,8 +230,8 @@ def chroma_search_keyword(
     query: str,
     *,
     top_k: int = 8,
-    category: Optional[str] = None,
-    terminal: Optional[str] = None,
+    category: str | None = None,
+    terminal: str | None = None,
 ) -> list[AirportDocView]:
     col = _get_collection()
     q = (query or "").strip()
