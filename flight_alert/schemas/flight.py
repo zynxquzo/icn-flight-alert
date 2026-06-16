@@ -4,9 +4,10 @@ Flight Schemas
 비행편 관련 요청/응답 스키마
 """
 
-from datetime import datetime, date
-from pydantic import BaseModel, Field, ConfigDict
+from datetime import date, datetime
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FlightType(str, Enum):
