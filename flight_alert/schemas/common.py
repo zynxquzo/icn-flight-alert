@@ -4,8 +4,9 @@ Common Schemas
 공통 응답 스키마
 """
 
-from pydantic import BaseModel
 from typing import Any, Generic, TypeVar
+
+from pydantic import BaseModel
 
 T = TypeVar('T')
 
