@@ -5,8 +5,9 @@ Notification Schemas
 """
 
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
 from enum import Enum
+
+from pydantic import BaseModel, ConfigDict
 
 
 class NotificationTypeEnum(str, Enum):
