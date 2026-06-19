@@ -1,12 +1,12 @@
 # flight_alert/models/user_security_token.py
 """비밀번호 재설정·이메일 인증용 일회성 토큰."""
 
-from datetime import datetime
 import enum
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import TYPE_CHECKING
 
 from database import Base
 

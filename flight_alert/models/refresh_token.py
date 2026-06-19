@@ -2,10 +2,10 @@
 """리프레시 토큰(불투명 문자열의 SHA-256 해시 저장)."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import TYPE_CHECKING
 
 from database import Base
 
