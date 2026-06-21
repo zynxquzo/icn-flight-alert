@@ -27,7 +27,7 @@ def register_exception_handlers(app):
     @app.exception_handler(NotFoundException)
     async def not_found_exception_handler(request: Request, exc: NotFoundException):
         """404 Not Found 처리"""
-        logger.warning(f"NotFoundException: {exc.message}")
+        logger.warning("NotFoundException: %s", exc.message)
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={
@@ -42,7 +42,7 @@ def register_exception_handlers(app):
     @app.exception_handler(BadRequestException)
     async def bad_request_exception_handler(request: Request, exc: BadRequestException):
         """400 Bad Request 처리"""
-        logger.warning(f"BadRequestException: {exc.message}")
+        logger.warning("BadRequestException: %s", exc.message)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
@@ -57,7 +57,7 @@ def register_exception_handlers(app):
     @app.exception_handler(APIException)
     async def api_exception_handler(request: Request, exc: APIException):
         """502 Bad Gateway 처리 (외부 API 에러)"""
-        logger.error(f"APIException: {exc.message}")
+        logger.error("APIException: %s", exc.message)
         return JSONResponse(
             status_code=status.HTTP_502_BAD_GATEWAY,
             content={
