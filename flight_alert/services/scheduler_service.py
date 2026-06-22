@@ -84,7 +84,7 @@ class FlightScheduler:
                 result = await db.scalars(
                     select(Flight).where(
                         and_(
-                            Flight.is_active == True,  # noqa: E712
+                            Flight.is_active.is_(True),
                             Flight.flight_date >= target_start,
                             Flight.flight_date <= target_end,
                         )

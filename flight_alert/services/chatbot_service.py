@@ -103,7 +103,7 @@ async def _build_user_context(db: AsyncSession, user_id: int) -> str:
     """사용자의 등록 비행편 + 최근 알림 5건을 컨텍스트 문자열로 반환."""
     flights_result = await db.execute(
         select(Flight)
-        .where(Flight.user_id == user_id, Flight.is_active == True)  # noqa: E712
+        .where(Flight.user_id == user_id, Flight.is_active.is_(True))
         .order_by(Flight.created_at.desc())
         .limit(5)
     )
