@@ -106,9 +106,9 @@ async def _add_notification_and_email(
 
     if email_sent:
         notification.is_sent = True
-        logger.info(f"✅ 이메일 발송 성공: {flight.user_email}")
+        logger.info("✅ 이메일 발송 성공: %s", flight.user_email)
     else:
-        logger.error(f"❌ 이메일 발송 실패: {flight.user_email}")
+        logger.error("❌ 이메일 발송 실패: %s", flight.user_email)
 
     logger.info(detection_log)
 
@@ -164,8 +164,9 @@ class FlightService:
         saved_flight.enriched = True
 
         logger.info(
-            f"비행편 등록 완료: flight_pk={saved_flight.flight_pk}, "
-            f"flight_id={saved_flight.flight_id}"
+            "비행편 등록 완료: flight_pk=%s, flight_id=%s",
+            saved_flight.flight_pk,
+            saved_flight.flight_id,
         )
         return saved_flight
 
@@ -214,7 +215,7 @@ class FlightService:
         await flight_repository.delete(db, flight)
         await db.commit()
 
-        logger.info(f"비행편 삭제 완료: flight_pk={flight_pk}, flight_id={flight.flight_id}")
+        logger.info("비행편 삭제 완료: flight_pk=%s, flight_id=%s", flight_pk, flight.flight_id)
 
     async def update_flight_status(
         self, db: AsyncSession, flight_pk: int, is_active: bool
@@ -228,7 +229,7 @@ class FlightService:
         await db.commit()
 
         status_text = "활성화" if is_active else "비활성화"
-        logger.info(f"비행편 상태 변경 완료: flight_pk={flight_pk}, {status_text}")
+        logger.info("비행편 상태 변경 완료: flight_pk=%s, %s", flight_pk, status_text)
 
         return updated_flight
 
@@ -267,7 +268,7 @@ class FlightService:
             flight.api_sync_status = "ok"
         else:
             flight.api_sync_status = "failed"
-            logger.warning(f"API 호출 실패 - 기존 데이터 유지: flight_pk={flight_pk}")
+            logger.warning("API 호출 실패 - 기존 데이터 유지: flight_pk=%s", flight_pk)
 
         flight.last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -348,8 +349,9 @@ class FlightService:
                 )
             else:
                 logger.info(
-                    "추정시각 변경(알림 생략, FLIGHT_DELAY_* 조건): "
-                    f"{old_estimated} → {flight.estimated_date_time}"
+                    "추정시각 변경(알림 생략, FLIGHT_DELAY_* 조건): %s → %s",
+                    old_estimated,
+                    flight.estimated_date_time,
                 )
 
         if old_remark != flight.remark:
@@ -378,7 +380,9 @@ class FlightService:
         await db.commit()
 
         logger.info(
-            f"비행편 갱신 완료: flight_pk={flight_pk}, 변경사항={len(changes)}건"
+            "비행편 갱신 완료: flight_pk=%s, 변경사항=%s건",
+            flight_pk,
+            len(changes),
         )
 
         return {
