@@ -72,7 +72,7 @@ class EmailService:
                 server.login(cls.SMTP_USERNAME, cls.SMTP_PASSWORD)
                 server.send_message(msg)
             
-            logger.info(f"✅ 이메일 발송 성공: to={to_email}, subject={subject}")
+            logger.info("✅ 이메일 발송 성공: to=%s, subject=%s", to_email, subject)
             return True
             
         except smtplib.SMTPAuthenticationError:
@@ -80,11 +80,11 @@ class EmailService:
             return False
         
         except smtplib.SMTPException as e:
-            logger.error(f"❌ SMTP 에러: {e}")
+            logger.error("❌ SMTP 에러: %s", e)
             return False
         
         except Exception as e:
-            logger.error(f"❌ 이메일 발송 실패: {e}")
+            logger.error("❌ 이메일 발송 실패: %s", e)
             return False
 
     @classmethod
