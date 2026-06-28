@@ -92,7 +92,7 @@ def register_exception_handlers(app):
         등록되므로 CORSMiddleware 바깥에서 실행됩니다. 따라서 CORS 헤더를 여기서 직접
         추가해야 브라우저 CORS 오류가 발생하지 않습니다.
         """
-        logger.error(f"Unexpected error: {str(exc)}", exc_info=True)
+        logger.error("Unexpected error: %s", exc, exc_info=True)
         content: dict = {
             "success": False,
             "error": {
