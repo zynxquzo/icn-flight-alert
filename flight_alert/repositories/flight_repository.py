@@ -17,7 +17,7 @@ class FlightRepository:
         stmt = select(Flight).where(Flight.user_email == user_email)
 
         if is_active is not None:
-            stmt = stmt.where(Flight.is_active == is_active)
+            stmt = stmt.where(Flight.is_active.is_(is_active))
 
         result = await db.scalars(stmt)
         return list(result.all())
@@ -32,7 +32,7 @@ class FlightRepository:
         stmt = select(Flight).where(Flight.user_id == user_id)
 
         if is_active is not None:
-            stmt = stmt.where(Flight.is_active == is_active)
+            stmt = stmt.where(Flight.is_active.is_(is_active))
 
         result = await db.scalars(stmt)
         return list(result.all())
