@@ -24,7 +24,7 @@ class Flight(Base):
     flight_pk: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     
     # User Information
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)  # ✅ 추가
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)
     user_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     
     # Flight Basic Information
