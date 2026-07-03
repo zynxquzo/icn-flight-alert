@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import httpx
 
@@ -67,7 +66,3 @@ async def crawl_airport_shopping() -> tuple[str, str]:
     return html, SHOPPING_URL
 
 
-async def crawl_url(url: str, params: dict[str, Any] | None = None) -> tuple[str, str]:
-    """임의 URL 크롤링."""
-    html = await _fetch(url, params=params or {})
-    return html, url
