@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from flight_alert.dependencies import get_current_user
 from flight_alert.models.user import User
-from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.services.flight_service import flight_service
 from flight_alert.services.flight_status_log_service import flight_status_log_service
 from flight_alert.schemas.flight import (
