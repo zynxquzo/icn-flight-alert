@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import datetime, date
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
