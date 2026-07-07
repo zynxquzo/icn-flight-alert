@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .flight_status_log import FlightStatusLog
     from .notification import Notification
-    from .user import User
 
 
 class Flight(Base):
