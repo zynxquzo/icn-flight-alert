@@ -4,11 +4,13 @@ Flight Model
 사용자가 등록한 관심 비행편 정보를 저장하는 테이블
 """
 
-from datetime import datetime, date
-from sqlalchemy import String, Date, DateTime, Boolean, Integer, ForeignKey, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from database import Base
+from datetime import date, datetime
 from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from database import Base
 
 if TYPE_CHECKING:
     from .flight_status_log import FlightStatusLog
