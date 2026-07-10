@@ -1,5 +1,6 @@
 # flight_alert/services/flight_service.py
 
+import asyncio
 import logging
 import os
 from datetime import datetime
@@ -97,7 +98,8 @@ async def _add_notification_and_email(
     db.add(notification)
     await db.flush()
 
-    email_sent = email_service.send_notification_email(
+    email_sent = await asyncio.to_thread(
+        email_service.send_notification_email,
         to_email=flight.user_email,
         subject=subject,
         message=message,
