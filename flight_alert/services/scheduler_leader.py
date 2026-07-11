@@ -57,4 +57,5 @@ async def is_current_leader() -> bool:
         holder = await client.get(LEADER_KEY)
         return holder == INSTANCE_ID
     except Exception:
+        logger.exception("리더 여부 확인 실패")
         return False
