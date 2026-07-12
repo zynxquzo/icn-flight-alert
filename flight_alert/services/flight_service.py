@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -83,8 +83,6 @@ async def _add_notification_and_email(
     *,
     detection_log: str,
 ) -> None:
-    from datetime import timezone
-
     from flight_alert.models.notification import Notification
 
     notification = Notification(
