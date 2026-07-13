@@ -137,8 +137,8 @@ class IncheonAPIService:
         except httpx.HTTPError as e:
             logger.error("API 호출 실패: %s", e)
             return None
-        except Exception as e:
-            logger.error("예상치 못한 에러: %s", e)
+        except Exception:
+            logger.exception("예상치 못한 에러")
             return None
 
 
