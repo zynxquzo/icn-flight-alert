@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 
 from sqlalchemy import text
@@ -14,6 +15,8 @@ from flight_alert.infrastructure.redis_client import ping_redis
 from flight_alert.services.scheduler_leader import is_current_leader
 from flight_alert.services.scheduler_service import flight_scheduler
 
+logger = logging.getLogger(__name__)
+
 
 async def check_database() -> dict:
     try:
@@ -21,6 +24,7 @@ async def check_database() -> dict:
             await conn.execute(text("SELECT 1"))
         return {"status": "ok"}
     except Exception as exc:
+        logger.exception("DB 헬스체크 실패")
         return {"status": "fail", "detail": str(exc)}
 
 
