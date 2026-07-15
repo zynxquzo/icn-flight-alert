@@ -215,8 +215,8 @@ class ChatbotService:
             answer = response.choices[0].message.content or ""
             logger.info("챗봇(레거시) 응답 생성 성공: %s 글자", len(answer))
             return ChatOutcome(response=answer, mode="legacy")
-        except Exception as e:
-            logger.error("챗봇 응답 생성 실패: %s", e)
+        except Exception:
+            logger.exception("챗봇 응답 생성 실패")
             return ChatOutcome(
                 response="죄송합니다. 응답 생성 중 오류가 발생했습니다.",
                 mode="legacy",
