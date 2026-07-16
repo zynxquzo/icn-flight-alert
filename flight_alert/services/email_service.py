@@ -85,7 +85,7 @@ class EmailService:
             return False
         
         except Exception as e:
-            logger.error("❌ 이메일 발송 실패: %s", e)
+            logger.error("❌ 이메일 발송 실패: %s", e, exc_info=True)
             return False
 
     @classmethod
@@ -119,7 +119,7 @@ class EmailService:
             logger.info("✅ 단문 이메일 발송 성공: to=%s subject=%s", to_email, subject)
             return True
         except Exception as e:
-            logger.error("❌ 단문 이메일 발송 실패: %s", e)
+            logger.error("❌ 단문 이메일 발송 실패: %s", e, exc_info=True)
             return False
 
     @classmethod
