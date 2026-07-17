@@ -192,7 +192,7 @@ def chroma_search_similar(
             include=["metadatas", "documents", "distances"],
         )
     except Exception as e:
-        logger.warning("Chroma query 실패: %s", e)
+        logger.warning("Chroma query 실패: %s", e, exc_info=True)
         return []
     ids = (res.get("ids") or [[]])[0]
     metas = (res.get("metadatas") or [[]])[0]
@@ -240,7 +240,7 @@ def chroma_search_keyword(
     try:
         r = col.get(where_document={"$contains": q}, include=["metadatas", "documents"])
     except Exception as e:
-        logger.warning("Chroma where_document 검색 실패, 부분 스캔으로 폴백: %s", e)
+        logger.warning("Chroma where_document 검색 실패, 부분 스캔으로 폴백: %s", e, exc_info=True)
         cap = min(8000, max(1, col.count()))
         r = col.get(include=["metadatas", "documents"], limit=cap)
     ids = r.get("ids") or []
