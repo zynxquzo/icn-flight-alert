@@ -335,7 +335,7 @@ class ChatbotService:
                 return await self._chat_rag(db, message, terminal, wait_time_hours, user_context)
             return ChatOutcome(response=text, mode="agent", sources=sources)
         except Exception as e:
-            logger.error("RAG agent 실패, 단순 RAG로 폴백: %s", e)
+            logger.error("RAG agent 실패, 단순 RAG로 폴백: %s", e, exc_info=True)
             return await self._chat_rag(db, message, terminal, wait_time_hours, user_context)
 
     async def chat(

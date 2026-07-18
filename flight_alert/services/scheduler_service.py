@@ -112,13 +112,12 @@ class FlightScheduler:
                                 len(res["changes"]),
                             )
 
-                    except Exception as e:
+                    except Exception:
                         error_count += 1
-                        logger.error(
-                            "갱신 실패: flight_pk=%s, flight_id=%s, error=%s",
+                        logger.exception(
+                            "갱신 실패: flight_pk=%s, flight_id=%s",
                             flight.flight_pk,
                             flight.flight_id,
-                            e,
                         )
 
                 logger.info(
