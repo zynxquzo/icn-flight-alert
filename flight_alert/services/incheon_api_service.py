@@ -135,7 +135,7 @@ class IncheonAPIService:
             return flight_data
 
         except httpx.HTTPError as e:
-            logger.error("API 호출 실패: %s", e)
+            logger.error("API 호출 실패: %s", e, exc_info=True)
             return None
         except Exception:
             logger.exception("예상치 못한 에러")
