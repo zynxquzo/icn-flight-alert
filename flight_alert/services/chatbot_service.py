@@ -308,7 +308,7 @@ class ChatbotService:
             logger.info("챗봇(RAG) 응답 생성 성공: %s 글자", len(answer))
             return ChatOutcome(response=answer, mode="rag", sources=sources)
         except Exception as e:
-            logger.error("RAG 응답 실패, 레거시로 폴백: %s", e)
+            logger.error("RAG 응답 실패, 레거시로 폴백: %s", e, exc_info=True)
             return self._chat_legacy(message, terminal, wait_time_hours, user_context)
 
     async def _chat_rag_agent(
