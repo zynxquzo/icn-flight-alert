@@ -1,0 +1,640 @@
+{
+  "summary": {
+    "legacy": {
+      "n_questions": 18,
+      "avg_keyword_hit_rate": 0.204,
+      "full_keyword_match_count": 0,
+      "floor_claim_stated_count": 18,
+      "floor_claim_correct_count": 6,
+      "floor_claim_wrong_count": 12
+    },
+    "rag": {
+      "n_questions": 18,
+      "avg_keyword_hit_rate": 0.954,
+      "full_keyword_match_count": 16,
+      "floor_claim_stated_count": 18,
+      "floor_claim_correct_count": 18,
+      "floor_claim_wrong_count": 0
+    }
+  },
+  "results": [
+    {
+      "id": "med_1",
+      "title": "인하대학교병원 제1여객터미널 공항의료센터",
+      "question": "인천공항 제1여객터미널 안에 있는 인하대학교병원 공항의료센터는 정확히 몇 층 어디에 있어?",
+      "expected_floor": "지하1층",
+      "expected_keywords": [
+        "지하1층",
+        "동편"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인하대학교병원 공항의료센터는 인천공항 제1여객터미널의 1층에 위치해 있습니다. 공항 내에서 간단한 응급처치나 의료 서비스를 필요로 할 때 이용하실 수 있습니다. 필요하시면 언제든지 방문해 주세요! 🏥✈️",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인하대학교병원 제1여객터미널 공항의료센터는 인천공항 제1여객터미널(T1) 지하 1층 동편에 위치해 있습니다. 운영시간에 대한 정보는 별도로 안내되지 않았습니다. 추가로 궁금한 사항이 있으시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "지하1층",
+          "동편"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "지하1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "med_2",
+      "title": "인천공항 T1 코로나19 검사센터(동)",
+      "question": "인천공항 제1터미널 코로나19 검사센터(동쪽)는 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "교통센터",
+        "1층",
+        "동편"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1터미널 동쪽에 위치한 코로나19 검사센터는 1층 출국장 구역에 있습니다. 체크인 카운터와 가까운 위치에 있으며, 안내 표지판을 따라가시면 쉽게 찾을 수 있습니다. 검사센터 이용 시간은 변동이 있을 수 있으니 미리 확인하시고 방문하시기 바랍니다. 안전한 여행 되세요! ✈️🦠",
+        "matched_keywords": [
+          "1층"
+        ],
+        "keyword_hit_rate": 0.3333333333333333,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1터미널 코로나19 검사센터(동쪽)는 교통센터 지상 1층 외부 동편에 위치해 있습니다. 다락휴 옆 외부 출입구 부근에 있습니다. 운영시간은 별도로 안내되고 있으니 참고하시기 바랍니다. 추가로 궁금한 점이 있으시면 말씀해 주세요!",
+        "matched_keywords": [
+          "교통센터",
+          "1층",
+          "동편"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "fin_1",
+      "title": "국민은행 환전소(입국장)",
+      "question": "인천공항 제1여객터미널 입국장에 있는 국민은행 환전소는 몇 층 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "1층",
+        "9번 출입구"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널 입국장에 있는 국민은행 환전소는 1층에 위치해 있습니다. 입국장 도착 후, 출구 쪽으로 가시면 쉽게 찾으실 수 있을 거예요. 필요한 환전 잘 하시고, 좋은 여행 되세요! ✈️💵",
+        "matched_keywords": [
+          "1층"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 입국장에 있는 국민은행 환전소는 1층 일반지역 9번 출입구 부근에 위치해 있습니다. 추가로 궁금한 점이 있으면 언제든지 물어보세요!",
+        "matched_keywords": [
+          "1층",
+          "9번 출입구"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "fin_2",
+      "title": "국민은행 환전소(출국장)",
+      "question": "인천공항 제1여객터미널 출국장에 있는 국민은행 환전소는 몇 층 어디에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "5번출국장"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널 출국장에 있는 국민은행 환전소는 3층에 위치해 있습니다. 출국 심사 후 오른쪽으로 가시면 쉽게 찾으실 수 있어요. 필요한 경우 환전소 직원에게 도움을 요청하시면 됩니다. 안전한 여행 되세요! ✈️💰",
+        "matched_keywords": [
+          "3층"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 출국장에 있는 국민은행 환전소는 3층에 위치해 있습니다. 구체적으로는 일반지역 5번 출국장 부근에 있습니다. 추가로, 면세지역에도 국민은행 환전소가 있으며, 이곳은 3층 면세지역 25번 게이트 부근에 있습니다.",
+        "matched_keywords": [
+          "3층",
+          "5번출국장"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층",
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "fin_3",
+      "title": "국민은행 환전소(출국장, 24H)",
+      "question": "인천공항 제1여객터미널에서 24시간 운영하는 국민은행 환전소(출국장)는 몇 층 어디에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "F 체크인카운터"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널에서 24시간 운영하는 국민은행 환전소는 3층 출국장에 위치해 있습니다. 출국 수속 후, 면세구역으로 들어가시면 쉽게 찾으실 수 있어요. 필요하신 경우 언제든지 방문해 보세요! 💱✈️",
+        "matched_keywords": [
+          "3층"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널에서 24시간 운영하는 국민은행 환전소(출국장)는 3층 일반지역 F 체크인카운터 부근에 위치해 있습니다. 도움이 필요하시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "3층",
+          "F 체크인카운터"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "tel_1",
+      "title": "LG 유플러스 로밍센터(24H)",
+      "question": "인천공항 제1여객터미널 LG 유플러스 로밍센터(24시간)는 몇 층 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "1층",
+        "서편",
+        "F 입국장"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 LG 유플러스 로밍센터는 3층에 위치해 있습니다. 24시간 운영되니 언제든지 방문하셔서 필요한 로밍 서비스를 이용하시면 됩니다! ✈️📱",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 LG 유플러스 로밍센터(24시간)는 1층 서편 F 입국장 부근에 위치해 있습니다. 도움이 필요하시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "1층",
+          "서편",
+          "F 입국장"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "tel_2",
+      "title": "KT 로밍센터(24H)",
+      "question": "인천공항 제1여객터미널에 24시간 운영하는 KT 로밍센터는 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "1층",
+        "F 입국장"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 24시간 운영하는 KT 로밍센터는 1층 입국장에 위치해 있습니다. 도착 후 바로 이용하실 수 있으며, 로밍 서비스 및 유심 카드 구매가 가능합니다. 필요하신 경우 바로 방문해 보세요! 📱✈️",
+        "matched_keywords": [
+          "1층"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널에 24시간 운영하는 KT 로밍센터는 1층 서편 F 입국장 부근에 위치해 있습니다. 추가로, SKT 로밍센터도 같은 위치에서 24시간 운영되고 있습니다. 도움이 필요하시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "1층",
+          "F 입국장"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "lounge_1",
+      "title": "캡슐호텔 다락휴(T1)",
+      "question": "인천공항 제1여객터미널 캡슐호텔 다락휴는 몇 층 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "교통센터",
+        "1층",
+        "중앙"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 캡슐호텔 다락휴는 4층에 위치해 있습니다. 공항 내에서 편안한 휴식을 취할 수 있는 좋은 장소입니다. 필요하시면 예약이나 이용 방법에 대한 정보도 제공해드릴 수 있습니다! 💤✈️",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "4층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 캡슐호텔 다락휴는 1층 중앙에 위치하고 있습니다. 대기 시간이 길어지면 편리하게 이용하실 수 있습니다. 추가적인 문의가 있으시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "1층",
+          "중앙"
+        ],
+        "keyword_hit_rate": 0.6666666666666666,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "lounge_2",
+      "title": "환승호텔(T1)",
+      "question": "인천공항 제1여객터미널 환승호텔은 몇 층 어디에 있어?",
+      "expected_floor": "4층",
+      "expected_keywords": [
+        "4층",
+        "11번 게이트"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 환승호텔은 3층에 위치해 있습니다. 환승 구역에 있어서 비행기 환승 중에 편안하게 쉴 수 있는 공간입니다. 호텔 예약은 현장에서 가능하니, 필요하시면 방문해보세요! 🏨✈️",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 환승호텔은 4층 면세지역 11번 게이트 부근에 위치해 있습니다. 추가로 궁금한 점이 있으면 언제든지 질문해 주세요!",
+        "matched_keywords": [
+          "4층",
+          "11번 게이트"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "4층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "admin_1",
+      "title": "무인민원발급기(T1, F 체크인)",
+      "question": "인천공항 제1여객터미널 F 체크인카운터 근처 무인민원발급기는 몇 층에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "F 체크인카운터"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널 F 체크인카운터 근처 무인민원발급기는 1층에 위치해 있습니다. 필요하신 민원 서류를 간편하게 발급받으실 수 있습니다. 추가로 궁금한 점이 있으시면 언제든지 물어보세요! 😊🛬",
+        "matched_keywords": [
+          "F 체크인카운터"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 무인민원발급기는 3층에 위치해 있습니다. F 체크인카운터 후면 부근에 있습니다. 추가로 궁금한 사항이 있으시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "3층",
+          "F 체크인카운터"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "admin_2",
+      "title": "여권민원센터(T1)",
+      "question": "인천공항 제1여객터미널 여권민원센터는 몇 층 어디에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "G 체크인카운터"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 여권민원센터는 1층에 위치해 있습니다. 1층 도착 구역에 있으며, 입국 후 여권 관련 문제를 처리할 수 있는 곳입니다. 필요한 경우 언제든지 방문해 주세요! 🛂✈️",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "1층",
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 여권민원센터는 3층 일반지역 G 체크인카운터 부근에 위치해 있습니다. 추가로 궁금한 사항이 있으시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "3층",
+          "G 체크인카운터"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "info_1",
+      "title": "T1 장애인 안심여행센터",
+      "question": "인천공항 제1여객터미널 장애인 안심여행센터는 몇 층 어디에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "7-8번 출입구"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 장애인 안심여행센터는 1층에 있습니다. 출국장 가까운 위치에 있어 편리하게 이용하실 수 있습니다. 필요한 도움이나 서비스를 요청하시면 친절하게 안내해 드립니다. 😊",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 장애인 안심여행센터는 3층에 위치해 있습니다. 구체적으로는 일반지역 7-8번 출입구 외부에 있습니다. 도움이 필요하시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "3층",
+          "7-8번 출입구"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "info_2",
+      "title": "환승투어 서비스(T1)",
+      "question": "인천공항 제1여객터미널 환승투어 서비스 카운터는 몇 층 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "1층",
+        "1번 출입구"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 환승투어 서비스 카운터는 3층에 위치해 있습니다. 보안 검색대 근처에 있으며, 환승객을 위한 다양한 정보와 서비스를 제공합니다. 환승 투어에 관심이 있으시면 꼭 들러보세요! ✈️🌍",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 환승투어 서비스 카운터는 1층 일반지역에 위치해 있으며, 1번 출입구 부근의 19, 20 서비스카운터에서 확인하실 수 있습니다. 추가로 궁금한 사항이 있으시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "1층",
+          "1번 출입구"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "postal_1",
+      "title": "우편취급국",
+      "question": "인천공항 제1여객터미널 우편취급국은 몇 층에 있어?",
+      "expected_floor": "2층",
+      "expected_keywords": [
+        "2층",
+        "중앙"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천국제공항 제1여객터미널의 우편취급국은 1층에 위치해 있습니다. 필요한 우편 서비스를 이용하시거나 소포를 보내실 수 있습니다. 추가적인 도움이 필요하시면 언제든지 말씀해 주세요! ✈️📮",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 우편취급국은 2층에 위치해 있습니다. 더 궁금한 점이 있으시면 언제든지 질문해 주세요!",
+        "matched_keywords": [
+          "2층"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "2층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "postal_2",
+      "title": "짐캐리(24H, N 체크인)",
+      "question": "인천공항 제1여객터미널 N 체크인카운터 근처 짐캐리(24시간)는 몇 층에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "N 체크인카운터"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널 N 체크인카운터 근처의 짐캐리(24시간)는 1층에 위치해 있습니다. 짐을 맡기고 편안하게 여행 준비를 하세요! 필요하신 다른 정보가 있으면 언제든지 말씀해 주세요. ✈️🧳",
+        "matched_keywords": [
+          "N 체크인카운터"
+        ],
+        "keyword_hit_rate": 0.5,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 N 체크인카운터 근처에 있는 짐캐리(24시간)는 3층에 위치해 있습니다. 도움이 필요하시면 언제든지 말씀해 주세요!",
+        "matched_keywords": [
+          "3층",
+          "N 체크인카운터"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "other_1",
+      "title": "롯데렌터카",
+      "question": "인천공항 제1여객터미널 롯데렌터카는 몇 층 어디에 있어?",
+      "expected_floor": "1층",
+      "expected_keywords": [
+        "1층",
+        "13번",
+        "14번"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천국제공항 제1여객터미널의 롯데렌터카는 1층에 위치해 있습니다. 도착층에 있으니, 도착 후 짐을 찾으신 뒤 안내 표지판을 따라가시면 쉽게 찾을 수 있을 거예요. 🚗✨ 추가로 궁금한 점이 있으시면 언제든지 물어보세요!",
+        "matched_keywords": [
+          "1층"
+        ],
+        "keyword_hit_rate": 0.3333333333333333,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 롯데렌터카는 1층 일반지역에 위치해 있으며, 13번과 14번 출입구 사이에 있습니다.",
+        "matched_keywords": [
+          "1층",
+          "13번",
+          "14번"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "other_2",
+      "title": "크린업에어(T1세탁소)",
+      "question": "인천공항 제1여객터미널 세탁소(크린업에어)는 몇 층에 있어?",
+      "expected_floor": "지하1층",
+      "expected_keywords": [
+        "지하1층",
+        "서편"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널의 세탁소(크린업에어)는 1층에 위치해 있습니다. 공항 도착 후 필요한 세탁 서비스를 이용하실 수 있습니다. 도움이 필요하시면 언제든지 말씀해 주세요! 🧺✈️",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널의 세탁소인 크린업에어는 지하 1층 서편에 위치해 있습니다. 추가로 궁금한 사항이 있으시면 언제든지 질문해 주세요!",
+        "matched_keywords": [
+          "지하1층",
+          "서편"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "지하1층"
+        ],
+        "floor_correct": true
+      }
+    },
+    {
+      "id": "fin_4",
+      "title": "삼성화재 여행자보험",
+      "question": "인천공항 제1여객터미널 삼성화재 여행자보험 창구는 몇 층 어디에 있어?",
+      "expected_floor": "3층",
+      "expected_keywords": [
+        "3층",
+        "K 체크인카운터"
+      ],
+      "legacy": {
+        "mode": "legacy",
+        "response": "인천공항 제1여객터미널 삼성화재 여행자보험 창구는 1층에 위치해 있습니다. 입국장 근처에 있으며, 여행자보험 관련 상담 및 가입이 가능합니다. 필요한 경우 편리하게 이용하세요! ☂️✈️",
+        "matched_keywords": [],
+        "keyword_hit_rate": 0.0,
+        "floor_claims": [
+          "1층"
+        ],
+        "floor_correct": false
+      },
+      "rag": {
+        "mode": "rag",
+        "response": "인천공항 제1여객터미널 삼성화재 여행자보험 창구는 3층에 위치해 있습니다. 비면세지역 K 체크인카운터 부근에 있는 창구와 면세지역 25, 29 게이트 인근에 있는 무인키오스크가 있습니다. 필요에 따라 선택하시면 됩니다.",
+        "matched_keywords": [
+          "3층",
+          "K 체크인카운터"
+        ],
+        "keyword_hit_rate": 1.0,
+        "floor_claims": [
+          "3층"
+        ],
+        "floor_correct": true
+      }
+    }
+  ]
+}

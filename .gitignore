@@ -26,3 +26,4 @@ Thumbs.db
 .claude
 
 *.json
+!scripts/eval_rag_grounding_results.json
