@@ -86,7 +86,7 @@ class AuthService:
 
     async def _issue_refresh(self, db: AsyncSession, user_id: int) -> str:
         raw = _new_opaque_token()
-        exp = datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRE_DAYS)
+        exp = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRE_DAYS)).replace(tzinfo=None)
         await token_repository.add_refresh_token(
             db,
             user_id=user_id,
@@ -100,7 +100,7 @@ class AuthService:
             db, user.user_id, SecurityTokenKind.email_verify.value
         )
         raw = _new_opaque_token()
-        exp = datetime.now(timezone.utc) + timedelta(hours=EMAIL_VERIFY_HOURS)
+        exp = (datetime.now(timezone.utc) + timedelta(hours=EMAIL_VERIFY_HOURS)).replace(tzinfo=None)
         await token_repository.add_security_token(
             db,
             user_id=user.user_id,
@@ -262,7 +262,7 @@ class AuthService:
             db, user.user_id, SecurityTokenKind.password_reset.value
         )
         raw = _new_opaque_token()
-        exp = datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_HOURS)
+        exp = (datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_HOURS)).replace(tzinfo=None)
         await token_repository.add_security_token(
             db,
             user_id=user.user_id,
