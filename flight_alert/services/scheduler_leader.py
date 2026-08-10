@@ -17,9 +17,12 @@ LEADER_KEY = "scheduler:refresh_flights:leader"
 INSTANCE_ID = os.getenv("HOSTNAME") or os.getenv("POD_NAME") or str(uuid.uuid4())[:8]
 
 
-async def try_acquire_leader_lock(ttl_seconds: int) -> bool:
+async def try_acquire_leader_lock(ttl_seconds: int, key: str = LEADER_KEY) -> bool:
     """
     리더 락 획득 시도. REDIS_URL 없거나 SCHEDULER_LEADER_LOCK=false면 항상 True.
+
+    job마다 독립적으로 락을 잡을 수 있도록 key를 지정할 수 있다
+    (기본값은 비행편 갱신 job과 공유하는 LEADER_KEY).
     """
     settings = get_settings()
     if not settings.scheduler_leader_lock:
@@ -35,7 +38,7 @@ async def try_acquire_leader_lock(ttl_seconds: int) -> bool:
         return True
 
     acquired = await client.set(
-        LEADER_KEY,
+        key,
         INSTANCE_ID,
         nx=True,
         ex=max(ttl_seconds, 30),

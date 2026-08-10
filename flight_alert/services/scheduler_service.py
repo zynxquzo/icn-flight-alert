@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 SCHEDULER_LAST_RUN_KEY = "scheduler:refresh_flights:last_run_at"
 SCHEDULER_LAST_STATUS_KEY = "scheduler:refresh_flights:last_status"
+CLEANUP_LEADER_KEY = "scheduler:cleanup_expired_flights:leader"
 
 
 class FlightScheduler:
@@ -135,6 +136,38 @@ class FlightScheduler:
             self._record_run("error")
             await self._persist_run_metadata("error")
 
+    async def _cleanup_expired_flights_async(self) -> None:
+        """지난 비행편 정리: 1) 활성 비행편 비활성화 2) 보관 기간 지난 비활성 비행편 삭제."""
+        if not await try_acquire_leader_lock(ttl_seconds=3600, key=CLEANUP_LEADER_KEY):
+            logger.info("비행편 정리: 다른 인스턴스가 리더 — job 스킵")
+            return
+
+        from database import async_session_maker
+        from flight_alert.repositories.flight_repository import flight_repository
+
+        settings = get_settings()
+        retention_days = settings.expired_flight_retention_days
+
+        logger.info("========== 지난 비행편 정리 시작 ==========")
+        try:
+            async with async_session_maker() as db:
+                today = date.today()
+                cutoff_date = today - timedelta(days=retention_days)
+
+                deactivated = await flight_repository.deactivate_expired(db, today)
+                deleted = await flight_repository.delete_stale_inactive(db, cutoff_date)
+                await db.commit()
+
+                logger.info(
+                    "========== 지난 비행편 정리 완료 ========== "
+                    "비활성화: %s건, 삭제(%s일 경과): %s건",
+                    deactivated,
+                    retention_days,
+                    deleted,
+                )
+        except Exception:
+            logger.exception("지난 비행편 정리 중 에러")
+
     def start(self, interval_minutes: int = 10):
         """스케줄러 시작"""
         if self.is_running:
@@ -147,6 +180,13 @@ class FlightScheduler:
             trigger=IntervalTrigger(minutes=interval_minutes),
             id="refresh_flights_job",
             name="비행편 자동 갱신",
+            replace_existing=True,
+        )
+        self.scheduler.add_job(
+            func=self._cleanup_expired_flights_async,
+            trigger=IntervalTrigger(hours=24),
+            id="cleanup_expired_flights_job",
+            name="지난 비행편 정리",
             replace_existing=True,
         )
 
