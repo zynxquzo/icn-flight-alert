@@ -111,7 +111,7 @@ class IncheonAPIService:
             by_id = [
                 item
                 for item in items
-                if item.get("flightId", "").upper() == flight_id.upper()
+                if (item.get("flightId") or "").upper() == flight_id.upper()
             ]
 
             by_date = [
