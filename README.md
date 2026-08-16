@@ -101,7 +101,9 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 **Alembic과 `DATABASE_URL`**: Alembic은 동기 드라이버(psycopg2)로 마이그레이션을 실행합니다. `DATABASE_URL`이 `postgresql+asyncpg://` 이어도 `alembic/env.py`에서 **`postgresql+psycopg2://`** 로 바꿔 연결합니다.
 
 **리비전 체인 (요약)**  
-`0001_baseline` 이후 **`0002_add_chat_messages`**(no-op 스텁: 일부 DB에만 기록된 리비전 ID와 맞추기 위함) → **`0002_auth_refresh_email`**(`email_verified`, `refresh_tokens`, `user_security_tokens` 등).
+`0001_baseline` 이후 **`0002_add_chat_messages`**(no-op 스텁: 일부 DB에만 기록된 리비전 ID와 맞추기 위함) → **`0002_auth_refresh_email`**(`email_verified`, `refresh_tokens`, `user_security_tokens` 등) → **`0003_flight_ext`**(채팅 세션, flights 확장, pg_trgm) → **`0004_chat_fix`** → **`0005_fix_chat_role_varchar`** → **`0006_drop_chat_messages_user_id`**.
+
+`0003`~`0006`은 처음부터 존재 여부(`has_table`/`get_columns`)를 확인하고 적용하도록 작성되어 있어 완전히 새 DB에서도, 이미 일부 적용된 기존 DB에서도 안전하다. `0002_auth_refresh_email`도 같은 이유로 존재 여부 체크가 추가되어 있다 — 자세한 배경은 [Troubleshooting #11](#-troubleshooting) 참고.
 
 **Windows 참고**: `alembic.ini`는 ConfigParser가 시스템 로케일(예: cp949)로 읽을 수 있으므로, **주석은 ASCII만** 사용합니다. UTF-8 특수문자·한글 주석이 있으면 `UnicodeDecodeError`가 날 수 있습니다.
 
@@ -533,6 +535,13 @@ uv run python scripts/crawl_and_index.py --all
 
 * **원인**: DB의 `alembic_version`과 저장소의 리비전 파일이 어긋나 있거나, `alembic.ini`에 UTF-8 전용 문자(예: em dash, 한글)가 있어 Windows 로케일(cp949)로 읽을 때 실패
 * **해결**: `uv run alembic current` 로 DB 버전 확인 후 `upgrade head` 또는 운영 정책에 맞게 `stamp` 조정. `alembic.ini` 주석은 ASCII만 유지
+
+### 11. Docker로 완전히 새 DB에 배포 시 backend가 무한 재시작 (`DuplicateColumn` / `DuplicateTable`)
+
+* **문제**: `docker compose up`으로 처음부터 새 PostgreSQL 볼륨에 마이그레이션을 돌리면 backend 컨테이너가 계속 재시작(`Restarting`)했다. `docker compose logs backend`에는 에러가 안 보이는데, 매번 `0001_baseline`부터 마이그레이션을 다시 실행하는 로그만 반복됐다.
+* **원인**: `0001_baseline`이 **현재 ORM 모델 전체**로 스키마를 만드는데(`Base.metadata.create_all`), 그 안에 이미 `users.email_verified`, `refresh_tokens`, `user_security_tokens`, `chat_messages` 등이 포함되어 있다. 그런데 이후 실행되는 `0002_auth_refresh_email`과 `0004_chat_fix`는 이걸 모르고 무조건 컬럼·테이블을 다시 만들거나(`email_verified` 컬럼, `refresh_tokens`/`user_security_tokens` 테이블) 이미 없는 컬럼(`chat_messages.user_id`)을 전제로 쿼리를 실행해서 `DuplicateColumn`/`DuplicateTable` 오류로 실패했다. Alembic이 트랜잭션DDL이라 실패 시 롤백되고, `RUN_ALEMBIC_ON_STARTUP=true`라 다음 재시작에서 처음부터 똑같이 실패를 반복한 것. (기존에 `0001_baseline`이 생기기 전부터 이미 운영되던 DB에서는 0002/0004가 먼저 적용된 상태라 이 문제가 드러나지 않았음.)
+* **디버깅 팁**: `docker compose logs`에 에러가 안 보이면, `docker compose run --rm --no-deps backend python -c "from database import run_alembic_upgrade; run_alembic_upgrade()"` 로 재시작 없이 직접 실행해서 traceback을 확인한다.
+* **해결**: `0002_auth_refresh_email_verify.py`, `0004_chat_fix.py`에 `inspector.has_table(...)` / `get_columns(...)` 존재 여부 체크를 추가해, 컬럼·테이블이 이미 있으면 건너뛰도록 멱등하게 수정.
 
 ---
 
