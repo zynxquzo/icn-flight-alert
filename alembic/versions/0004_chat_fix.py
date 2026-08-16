@@ -60,46 +60,47 @@ def upgrade() -> None:
             sa.Column("feedback", sa.String(20), nullable=True),
         )
 
-    # 기존 레거시 메시지는 user_id 기준으로 세션 1개에 묶습니다.
-    result = bind.execute(text("select distinct user_id from chat_messages order by user_id"))
-    user_ids = [row[0] for row in result.fetchall()]
+    # 기존 레거시 메시지는 user_id 기준으로 세션 1개에 묶습니다 (user_id 컬럼이 남아있는 DB에서만 해당).
+    if _column_exists(bind, "chat_messages", "user_id"):
+        result = bind.execute(text("select distinct user_id from chat_messages order by user_id"))
+        user_ids = [row[0] for row in result.fetchall()]
 
-    for user_id in user_ids:
-        existing_session_id = bind.execute(
-            text("select session_id from chat_sessions where user_id = :user_id limit 1"),
-            {"user_id": user_id},
-        ).scalar()
-        if not existing_session_id:
-            first_user_message = bind.execute(
-                text(
-                    """
-                    select content
-                    from chat_messages
-                    where user_id = :user_id and role = 'user'
-                    order by created_at asc, chat_message_id asc
-                    limit 1
-                    """
-                ),
+        for user_id in user_ids:
+            existing_session_id = bind.execute(
+                text("select session_id from chat_sessions where user_id = :user_id limit 1"),
                 {"user_id": user_id},
             ).scalar()
-            session_id = str(uuid.uuid4())
-            title = (first_user_message or "기존 채팅 기록")[:80]
-            bind.execute(
-                text(
-                    """
-                    insert into chat_sessions (session_id, user_id, title, terminal)
-                    values (:session_id, :user_id, :title, 'T1')
-                    """
-                ),
-                {"session_id": session_id, "user_id": user_id, "title": title},
-            )
-        else:
-            session_id = existing_session_id
+            if not existing_session_id:
+                first_user_message = bind.execute(
+                    text(
+                        """
+                        select content
+                        from chat_messages
+                        where user_id = :user_id and role = 'user'
+                        order by created_at asc, chat_message_id asc
+                        limit 1
+                        """
+                    ),
+                    {"user_id": user_id},
+                ).scalar()
+                session_id = str(uuid.uuid4())
+                title = (first_user_message or "기존 채팅 기록")[:80]
+                bind.execute(
+                    text(
+                        """
+                        insert into chat_sessions (session_id, user_id, title, terminal)
+                        values (:session_id, :user_id, :title, 'T1')
+                        """
+                    ),
+                    {"session_id": session_id, "user_id": user_id, "title": title},
+                )
+            else:
+                session_id = existing_session_id
 
-        bind.execute(
-            text("update chat_messages set session_id = :session_id where user_id = :user_id"),
-            {"session_id": session_id, "user_id": user_id},
-        )
+            bind.execute(
+                text("update chat_messages set session_id = :session_id where user_id = :user_id"),
+                {"session_id": session_id, "user_id": user_id},
+            )
 
     if _column_exists(bind, "chat_messages", "chat_message_id") and not _column_exists(
         bind, "chat_messages", "message_id"

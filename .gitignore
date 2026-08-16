@@ -25,5 +25,8 @@ Thumbs.db
 
 .claude
 
+# Docker deployment guide (local only)
+docs/DOCKER_DEPLOY_GUIDE.md
+
 *.json
 !scripts/eval_rag_grounding_results.json
