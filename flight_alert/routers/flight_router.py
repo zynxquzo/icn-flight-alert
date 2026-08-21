@@ -23,6 +23,8 @@ from flight_alert.schemas.flight_status_log import FlightStatusLogResponse
 
 router = APIRouter(prefix="/flights", tags=["Flights"])
 
+KST = timezone(timedelta(hours=9))
+
 
 def _ics_escape(text: str) -> str:
     """iCalendar TEXT 값 이스케이프 (RFC 5545): \\, ; , 개행 처리."""
@@ -41,7 +43,7 @@ def _generate_ics(flight) -> str:
         if not dt_str:
             return None
         try:
-            return datetime.strptime(dt_str, "%Y%m%d%H%M").replace(tzinfo=timezone.utc)
+            return datetime.strptime(dt_str, "%Y%m%d%H%M").replace(tzinfo=KST).astimezone(timezone.utc)
         except ValueError:
             return None
 
@@ -52,8 +54,8 @@ def _generate_ics(flight) -> str:
             flight.flight_date.month,
             flight.flight_date.day,
             0, 0,
-            tzinfo=timezone.utc,
-        )
+            tzinfo=KST,
+        ).astimezone(timezone.utc)
     if start_dt is None:
         start_dt = datetime.now(timezone.utc)
     end_dt = start_dt + timedelta(hours=1)
