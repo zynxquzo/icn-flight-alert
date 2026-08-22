@@ -24,6 +24,17 @@ from flight_alert.schemas.flight_status_log import FlightStatusLogResponse
 router = APIRouter(prefix="/flights", tags=["Flights"])
 
 
+def _ics_escape(text: str) -> str:
+    """iCalendar TEXT 값 이스케이프 (RFC 5545): \\, ; , 개행 처리."""
+    return (
+        text.replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\r\n", "\\n")
+        .replace("\n", "\\n")
+    )
+
+
 def _generate_ics(flight) -> str:
     """비행편 한 건을 ICS(iCalendar) 텍스트로 변환."""
     def parse_dt(dt_str: str | None) -> datetime | None:
@@ -69,7 +80,7 @@ def _generate_ics(flight) -> str:
         f"예정 시각: {flight.schedule_date_time or '-'}",
         f"비고: {flight.remark or '-'}",
     ]
-    description = "\\n".join(desc_lines)
+    description = "\\n".join(_ics_escape(line) for line in desc_lines)
     uid = f"icn-flight-{flight.flight_pk}@icn-flight-alert"
     now_str = datetime.now(timezone.utc).strftime(fmt)
 
@@ -84,9 +95,9 @@ def _generate_ics(flight) -> str:
         f"DTSTAMP:{now_str}\r\n"
         f"DTSTART:{start_dt.strftime(fmt)}\r\n"
         f"DTEND:{end_dt.strftime(fmt)}\r\n"
-        f"SUMMARY:{summary}\r\n"
+        f"SUMMARY:{_ics_escape(summary)}\r\n"
         f"DESCRIPTION:{description}\r\n"
-        f"LOCATION:{location}\r\n"
+        f"LOCATION:{_ics_escape(location)}\r\n"
         "END:VEVENT\r\n"
         "END:VCALENDAR\r\n"
     )
