@@ -7,7 +7,7 @@ APScheduler를 사용한 주기적 비행편 갱신 (Redis 리더 락으로 단�
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -17,6 +17,8 @@ from flight_alert.infrastructure.redis_client import get_redis
 from flight_alert.services.scheduler_leader import try_acquire_leader_lock
 
 logger = logging.getLogger(__name__)
+
+KST = timezone(timedelta(hours=9))
 
 SCHEDULER_LAST_RUN_KEY = "scheduler:refresh_flights:last_run_at"
 SCHEDULER_LAST_STATUS_KEY = "scheduler:refresh_flights:last_status"
@@ -78,7 +80,7 @@ class FlightScheduler:
 
         try:
             async with async_session_maker() as db:
-                today = date.today()
+                today = datetime.now(KST).date()
                 target_start = today
                 target_end = today + timedelta(days=2)
 
@@ -151,7 +153,7 @@ class FlightScheduler:
         logger.info("========== 지난 비행편 정리 시작 ==========")
         try:
             async with async_session_maker() as db:
-                today = date.today()
+                today = datetime.now(KST).date()
                 cutoff_date = today - timedelta(days=retention_days)
 
                 deactivated = await flight_repository.deactivate_expired(db, today)
