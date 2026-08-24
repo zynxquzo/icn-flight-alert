@@ -235,8 +235,6 @@ class FlightService:
 
     async def refresh_flight(self, db: AsyncSession, flight_pk: int) -> dict:
         """비행편 정보 수동 갱신"""
-        from datetime import timezone
-
         from flight_alert.models.notification import NotificationType
 
         flight = await self.read_flight_by_id(db, flight_pk)
