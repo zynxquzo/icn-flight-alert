@@ -56,6 +56,29 @@ class FlightResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SharedFlightResponse(BaseModel):
+    """읽기 전용 공유 링크 응답 (소유자 개인정보 제외)"""
+    flight_pk: int
+    flight_id: str | None
+    flight_date: date | None
+    flight_type: str | None
+    airline: str | None
+    airport: str | None
+    airport_code: str | None
+    terminal_id: str | None
+    gate_number: str | None
+    schedule_date_time: str | None
+    estimated_date_time: str | None
+    remark: str | None
+    chkin_range: str | None
+    carousel: str | None
+    exit_number: str | None
+    is_active: bool
+    last_checked_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class FlightListResponse(BaseModel):
     """비행편 목록 응답 (간소화된 정보)"""
     flight_pk: int

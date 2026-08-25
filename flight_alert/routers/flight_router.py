@@ -18,6 +18,7 @@ from flight_alert.schemas.flight import (
     FlightResponse,
     FlightListResponse,
     FlightUpdateStatus,
+    SharedFlightResponse,
 )
 from flight_alert.schemas.flight_status_log import FlightStatusLogResponse
 
@@ -290,12 +291,12 @@ async def revoke_share_link(
     await db.commit()
 
 
-@router.get("/shared/{share_token}", response_model=FlightResponse)
+@router.get("/shared/{share_token}", response_model=SharedFlightResponse)
 async def read_shared_flight(
     share_token: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """공유 링크로 비행편 읽기 전용 조회 (인증 불필요)."""
+    """공유 링크로 비행편 읽기 전용 조회 (인증 불필요). 소유자 개인정보는 제외."""
     from sqlalchemy import select
     from flight_alert.models.flight import Flight as FlightModel
 
@@ -307,4 +308,4 @@ async def read_shared_flight(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="유효하지 않은 공유 링크입니다.",
         )
-    return FlightResponse.model_validate(flight)
+    return SharedFlightResponse.model_validate(flight)
