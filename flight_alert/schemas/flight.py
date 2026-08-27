@@ -4,16 +4,24 @@ Flight Schemas
 비행편 관련 요청/응답 스키마
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class FlightType(str, Enum):
     """비행편 타입"""
     departure = "departure"
     arrival = "arrival"
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    """DB에는 tzinfo 없는 UTC 시각으로 저장되므로, 응답 직렬화 시
+    tzinfo를 명시해 클라이언트가 로컬 시간으로 오인하지 않게 한다."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class FlightCreate(BaseModel):
@@ -55,6 +63,9 @@ class FlightResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    _normalize_created_at = field_validator("created_at")(_as_utc)
+    _normalize_last_checked_at = field_validator("last_checked_at")(_as_utc)
+
 
 class SharedFlightResponse(BaseModel):
     """읽기 전용 공유 링크 응답 (소유자 개인정보 제외)"""
@@ -77,6 +88,8 @@ class SharedFlightResponse(BaseModel):
     last_checked_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
+
+    _normalize_last_checked_at = field_validator("last_checked_at")(_as_utc)
 
 
 class FlightListResponse(BaseModel):
