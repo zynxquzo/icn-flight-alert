@@ -3,10 +3,18 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    """DB에는 tzinfo 없는 UTC 시각으로 저장되므로, 응답 직렬화 시
+    tzinfo를 명시해 클라이언트가 로컬 시간으로 오인하지 않게 한다."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class ChatSessionCreate(BaseModel):
@@ -24,6 +32,8 @@ class ChatMessageOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    _normalize_created_at = field_validator("created_at")(_as_utc)
+
 
 class ChatSessionOut(BaseModel):
     session_id: str
@@ -35,6 +45,9 @@ class ChatSessionOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    _normalize_created_at = field_validator("created_at")(_as_utc)
+    _normalize_updated_at = field_validator("updated_at")(_as_utc)
+
 
 class ChatSessionSummary(BaseModel):
     session_id: str
@@ -44,6 +57,9 @@ class ChatSessionSummary(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    _normalize_created_at = field_validator("created_at")(_as_utc)
+    _normalize_updated_at = field_validator("updated_at")(_as_utc)
 
 
 class SessionChatRequest(BaseModel):
