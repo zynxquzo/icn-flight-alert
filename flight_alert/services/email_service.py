@@ -4,6 +4,7 @@ Email Service
 Gmail SMTP를 사용한 이메일 발송
 """
 
+import html
 import logging
 import os
 import smtplib
@@ -125,7 +126,10 @@ class EmailService:
     @classmethod
     def _create_html_body(cls, message: str, flight_id: str = None) -> str:
         """HTML 이메일 본문 생성"""
-        flight_info = f"<p><strong>항공편:</strong> {flight_id}</p>" if flight_id else ""
+        message = html.escape(message)
+        flight_info = (
+            f"<p><strong>항공편:</strong> {html.escape(flight_id)}</p>" if flight_id else ""
+        )
         
         html = f"""
         <html>
