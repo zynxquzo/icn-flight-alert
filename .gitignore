@@ -27,6 +27,8 @@ Thumbs.db
 
 # Docker deployment guide (local only)
 docs/DOCKER_DEPLOY_GUIDE.md
+docs/VPS_DEPLOY_GUIDE.md
+docs/DOMAIN_HTTPS_GUIDE.md
 
 *.json
 !scripts/eval_rag_grounding_results.json
