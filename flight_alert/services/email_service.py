@@ -131,7 +131,7 @@ class EmailService:
             f"<p><strong>항공편:</strong> {html.escape(flight_id)}</p>" if flight_id else ""
         )
         
-        html = f"""
+        html_body = f"""
         <html>
             <head>
                 <style>
@@ -195,7 +195,7 @@ class EmailService:
             </body>
         </html>
         """
-        return html
+        return html_body
 
 
 email_service = EmailService()
