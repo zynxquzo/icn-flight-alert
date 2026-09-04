@@ -4,6 +4,8 @@
 
 비행편 변경 사항을 자동으로 감지하고 이메일로 알려주며, RAG 기반 AI 챗봇을 통해 공항 대기 시간 동안 유용한 정보를 제공합니다.
 
+🔗 **서비스 바로가기**: [https://icnflightalert.site](https://icnflightalert.site)
+
 ---
 
 ## 📚 Table of Contents
