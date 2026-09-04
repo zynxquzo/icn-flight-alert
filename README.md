@@ -472,11 +472,13 @@ docker compose ps
 1. **로컬 컨테이너 검증** — Docker를 처음 다루는 사람 기준으로 설치부터 `docker compose up`까지 단계별로 진행 ✅
 2. **VPS 수동 배포** — Google Cloud Compute Engine의 `e2-micro` Always Free 인스턴스에, 도메인 없이 서버 공인 IP로 접속하는 구성으로 배포. VM 생성, 방화벽(VPC) 설정, SSH 접속, Docker 설치, 소스 배포, 예산 알림(Budget Alert) 설정까지 진행 ✅
 3. **기본 모니터링·알람** — AWS CloudWatch 대신 Google Cloud Monitoring으로, Ops Agent 설치(메모리·디스크 지표), 이메일 알림 채널, Uptime Check(헬스체크 다운 감지), CPU 80%·디스크 85% 임계치 알림 정책까지 구성. 부하 테스트로 알림 수신까지 확인 완료 ✅
-4. **도메인 연결 + HTTPS** — nginx 리버스 프록시 + Let's Encrypt(Certbot)로 `https://` 접속 구성 (서브도메인 분리: 프론트=루트 도메인, 백엔드=`api.` 서브도메인) ⏳ 예정 (아직 도메인 미구입)
+4. **도메인 연결 + HTTPS** — 가비아에서 `icnflightalert.site` 도메인 구입 후, nginx 리버스 프록시 + Let's Encrypt(Certbot)로 `https://` 접속 구성 (서브도메인 분리: 프론트=루트 도메인, 백엔드=`api.` 서브도메인) ✅
 
 > ℹ️ 각 단계의 상세 절차는 로컬 참고용 가이드 문서로 별도 정리했으며 `.gitignore`에 등록되어 저장소에는 포함하지 않습니다. AWS는 사용하지 않는 방향으로 진행했고(비용·러닝커브 이유), Oracle Cloud는 가입 단계에서 반복적으로 실패해 Google Cloud로 전환했습니다.
 
-현재 운영 환경은 HTTPS 없이 `http://<서버 IP>:8080` / `:8000`으로 직접 노출된 상태이며, GCP Cloud Monitoring으로 CPU·디스크·서비스 다운 알림은 이메일로 수신되도록 구성되어 있습니다. 도메인 연결 및 nginx 리버스 프록시 + Let's Encrypt 적용은 후속 작업으로 남아 있습니다.
+**서비스 주소**: [https://icnflightalert.site](https://icnflightalert.site) (프론트엔드) / `https://api.icnflightalert.site` (백엔드 API, `/docs`에서 API 문서 확인 가능)
+
+HTTPS까지 적용되어 있으며, GCP Cloud Monitoring으로 CPU·디스크·서비스 다운 알림은 이메일로 수신되도록 구성되어 있습니다.
 
 ---
 
