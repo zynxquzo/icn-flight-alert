@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -83,6 +83,7 @@ class TestShouldNotifyDelay:
 async def test_refresh_flight_detects_gate_change():
     flight = _make_flight()
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     api_payload = {
         "airline": "대한항공",
         "airport": "나리타",
@@ -129,6 +130,7 @@ async def test_refresh_flight_detects_gate_change():
 async def test_refresh_flight_detects_cancel():
     flight = _make_flight(remark="출발")
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     api_payload = {
         "airline": "대한항공",
         "terminalid": "P01",
@@ -175,6 +177,7 @@ async def test_refresh_flight_eta_adjust_without_delay_notification(monkeypatch)
 
     flight = _make_flight(estimated_date_time="202605221030", remark="출발")
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
     api_payload = {
         "terminalid": "P01",
         "gatenumber": "114",
@@ -217,6 +220,7 @@ async def test_refresh_flight_eta_adjust_without_delay_notification(monkeypatch)
 async def test_refresh_flight_no_api_data_keeps_existing():
     flight = _make_flight()
     mock_db = AsyncMock()
+    mock_db.add = MagicMock()
 
     with (
         patch(
