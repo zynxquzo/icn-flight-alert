@@ -41,6 +41,12 @@ def check_scheduler() -> dict:
     info = flight_scheduler.get_status()
     info["enabled"] = settings.enable_scheduler
     info["leader_lock"] = settings.scheduler_leader_lock and settings.redis_enabled
+    if settings.enable_scheduler and not info["running"]:
+        info["status"] = "fail"
+    elif info["last_run_status"] == "error":
+        info["status"] = "fail"
+    else:
+        info["status"] = "ok"
     return info
 
 
