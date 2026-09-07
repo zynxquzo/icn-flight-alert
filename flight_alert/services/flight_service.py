@@ -161,8 +161,6 @@ class FlightService:
         saved_flight = await flight_repository.save(db, flight)
         await db.commit()
 
-        saved_flight.enriched = True
-
         logger.info(
             "비행편 등록 완료: flight_pk=%s, flight_id=%s",
             saved_flight.flight_pk,

@@ -7,7 +7,7 @@ Flight Schemas
 from datetime import date, datetime, timezone
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class FlightType(str, Enum):
@@ -65,6 +65,17 @@ class FlightResponse(BaseModel):
 
     _normalize_created_at = field_validator("created_at")(_as_utc)
     _normalize_last_checked_at = field_validator("last_checked_at")(_as_utc)
+
+    @model_validator(mode="after")
+    def _derive_enriched_from_sync_status(self) -> "FlightResponse":
+        """api_sync_status가 'failed'면 enriched도 False로 맞춘다.
+
+        기존에는 enriched가 항상 기본값 True로 직렬화되어, API 동기화
+        실패 이후에도 클라이언트가 부가 필드를 신뢰할 수 있는 것처럼 보였다.
+        """
+        if self.api_sync_status == "failed":
+            self.enriched = False
+        return self
 
 
 class SharedFlightResponse(BaseModel):
