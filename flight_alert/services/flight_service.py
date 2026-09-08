@@ -108,6 +108,7 @@ async def _add_notification_and_email(
         notification.is_sent = True
         logger.info("✅ 이메일 발송 성공: %s", flight.user_email)
     else:
+        notification.error_message = "이메일 발송 실패"
         logger.error("❌ 이메일 발송 실패: %s", flight.user_email)
 
     logger.info(detection_log)
