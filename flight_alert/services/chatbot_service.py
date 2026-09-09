@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -189,7 +190,7 @@ class ChatbotService:
         ctx_section = f"\n\n{user_context}" if user_context else ""
         return base_prompt + terminal_info + time_info + ctx_section
 
-    def _chat_legacy(
+    async def _chat_legacy(
         self,
         message: str,
         terminal: str,
@@ -203,7 +204,8 @@ class ChatbotService:
             )
         try:
             system_prompt = self._create_system_prompt(terminal, wait_time_hours, user_context)
-            response = self.client.chat.completions.create(
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -233,7 +235,7 @@ class ChatbotService:
         assert self.async_client is not None
         try:
             if await vector_repository.count_documents(db) == 0:
-                return self._chat_legacy(message, terminal, wait_time_hours, user_context)
+                return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
 
             query_emb = await generate_embedding(message)
             term = _normalize_terminal(terminal)
@@ -309,7 +311,7 @@ class ChatbotService:
             return ChatOutcome(response=answer, mode="rag", sources=sources)
         except Exception as e:
             logger.error("RAG 응답 실패, 레거시로 폴백: %s", e, exc_info=True)
-            return self._chat_legacy(message, terminal, wait_time_hours, user_context)
+            return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
 
     async def _chat_rag_agent(
         self,
@@ -361,11 +363,11 @@ class ChatbotService:
                     logger.warning("사용자 컨텍스트 빌드 실패: %s", e)
 
             if not _rag_enabled():
-                return self._chat_legacy(message, terminal, wait_time_hours, user_context)
+                return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
 
             has_docs = await vector_repository.count_documents(db) > 0
             if not has_docs:
-                return self._chat_legacy(message, terminal, wait_time_hours, user_context)
+                return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
 
             # 복잡도 기반 라우팅
             if _rag_agent_enabled() and _is_complex_query(message):
