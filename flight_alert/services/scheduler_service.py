@@ -64,7 +64,15 @@ class FlightScheduler:
 
     async def _refresh_active_flights_async(self) -> None:
         ttl = max(self._interval_minutes * 60 - 30, 60)
-        if not await try_acquire_leader_lock(ttl_seconds=ttl):
+        try:
+            is_leader = await try_acquire_leader_lock(ttl_seconds=ttl)
+        except Exception as e:
+            logger.exception("스케줄러 리더 락 획득 중 에러: %s", e)
+            self._record_run("error")
+            await self._persist_run_metadata("error")
+            return
+
+        if not is_leader:
             logger.info("스케줄러: 다른 인스턴스가 리더 — job 스킵")
             self._record_run("skipped")
             await self._persist_run_metadata("skipped")
