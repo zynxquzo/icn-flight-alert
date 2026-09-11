@@ -117,6 +117,7 @@ class FlightScheduler:
 
                     except Exception:
                         error_count += 1
+                        await db.rollback()
                         logger.exception(
                             "갱신 실패: flight_pk=%s, flight_id=%s",
                             flight.flight_pk,
