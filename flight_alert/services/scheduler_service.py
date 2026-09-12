@@ -149,7 +149,13 @@ class FlightScheduler:
 
     async def _cleanup_expired_flights_async(self) -> None:
         """지난 비행편 정리: 1) 활성 비행편 비활성화 2) 보관 기간 지난 비활성 비행편 삭제."""
-        if not await try_acquire_leader_lock(ttl_seconds=3600, key=CLEANUP_LEADER_KEY):
+        try:
+            is_leader = await try_acquire_leader_lock(ttl_seconds=3600, key=CLEANUP_LEADER_KEY)
+        except Exception:
+            logger.exception("비행편 정리: 리더 락 획득 중 에러")
+            return
+
+        if not is_leader:
             logger.info("비행편 정리: 다른 인스턴스가 리더 — job 스킵")
             return
 
