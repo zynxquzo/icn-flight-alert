@@ -50,6 +50,21 @@ class FlightScheduler:
         self._last_run_at = datetime.now(timezone.utc)
         self._last_run_status = status
 
+    async def get_persisted_status(self) -> dict | None:
+        """Redis에 기록된 마지막 실행 정보 조회 (리더가 아닌 인스턴스의 헬스체크용)."""
+        settings = get_settings()
+        if not settings.redis_enabled:
+            return None
+        client = await get_redis()
+        if client is None:
+            return None
+        last_run_at, last_run_status = await client.mget(
+            SCHEDULER_LAST_RUN_KEY, SCHEDULER_LAST_STATUS_KEY
+        )
+        if last_run_at is None and last_run_status is None:
+            return None
+        return {"last_run_at": last_run_at, "last_run_status": last_run_status}
+
     async def _persist_run_metadata(self, status: str) -> None:
         settings = get_settings()
         if not settings.redis_enabled:

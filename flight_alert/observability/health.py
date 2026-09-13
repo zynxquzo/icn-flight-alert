@@ -36,11 +36,18 @@ async def check_redis() -> dict:
     return {"status": "ok" if ok else "fail"}
 
 
-def check_scheduler() -> dict:
+async def check_scheduler(is_leader: bool) -> dict:
     settings = get_settings()
     info = flight_scheduler.get_status()
     info["enabled"] = settings.enable_scheduler
     info["leader_lock"] = settings.scheduler_leader_lock and settings.redis_enabled
+    # 리더가 아닌 인스턴스는 자기 자신의 job을 스킵하므로 last_run_status가 항상
+    # "skipped"로 고정된다 — 실제 리더의 실행 결과는 Redis에서 가져와 반영한다.
+    if info["leader_lock"] and not is_leader:
+        persisted = await flight_scheduler.get_persisted_status()
+        if persisted:
+            info["last_run_at"] = persisted["last_run_at"]
+            info["last_run_status"] = persisted["last_run_status"]
     if settings.enable_scheduler and not info["running"]:
         info["status"] = "fail"
     elif info["last_run_status"] == "error":
@@ -53,11 +60,11 @@ def check_scheduler() -> dict:
 async def build_health_payload() -> dict:
     db_check = await check_database()
     redis_check = await check_redis()
-    scheduler_check = check_scheduler()
 
     leader = False
     if get_settings().redis_enabled and get_settings().scheduler_leader_lock:
         leader = await is_current_leader()
+    scheduler_check = await check_scheduler(leader)
     scheduler_check["is_leader"] = leader
 
     checks = {
