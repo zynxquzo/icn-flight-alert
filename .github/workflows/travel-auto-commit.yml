@@ -1,8 +1,9 @@
 name: 여행 기간 한정 자동 코드 정리 커밋
 
 # 2026-09-28 ~ 2026-10-02(KST) 사이에만 동작하는 한시적 워크플로.
-# 매일 사소한 린트/포맷 autofix를 적용하고, diff에 맞는 커밋 메시지를 OpenAI API로 생성해 커밋/푸시한다.
-# 여행이 끝나면 이 파일을 삭제하면 된다 (README 참고).
+# 매일 사소한 린트/포맷 autofix를 적용한 뒤, 그중 파일 하나만 골라 하루에 한 가지 수정사항만 커밋한다.
+# diff에 맞는 커밋 메시지는 OpenAI API로 생성한다.
+# 여행이 끝나면 이 파일을 삭제하면 된다.
 
 on:
   schedule:
@@ -96,18 +97,19 @@ jobs:
             echo "인식된 언어/린트 스택이 없습니다. autofix 단계를 건너뜁니다."
           fi
 
-      - name: autofix로 변경이 없으면 안전한 사소한 개선 적용
+      - name: autofix로 변경이 없으면 안전한 사소한 개선 후보를 찾아 적용
         if: steps.date_check.outputs.in_range == 'true'
         run: |
           set -e
           if git diff --quiet; then
-            echo "autofix로 인한 변경이 없어, 안전한 사소한 개선(트레일링 공백/EOF 개행 정리)을 적용합니다."
+            echo "autofix로 인한 변경이 없어, 안전한 사소한 개선(트레일링 공백/EOF 개행 정리) 후보를 하나 찾아 적용합니다."
             python3 - <<'PY'
           import pathlib
+          import random
 
           exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".md", ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini"}
           skip_dirs = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".uv"}
-          changed = False
+          candidates = []
 
           for path in pathlib.Path(".").rglob("*"):
               if not path.is_file():
@@ -126,12 +128,39 @@ jobs:
                   new_text += "\n"
 
               if new_text != text:
-                  path.write_text(new_text, encoding="utf-8")
-                  changed = True
+                  candidates.append((path, new_text))
 
-          print("changed" if changed else "no-op")
+          # 여러 후보가 있어도 오늘은 딱 하나의 파일만 고쳐서, 하루에 한 가지 수정사항만 남긴다.
+          if candidates:
+              path, new_text = random.choice(candidates)
+              path.write_text(new_text, encoding="utf-8")
+              print(f"적용된 파일: {path}")
+          else:
+              print("적용할 후보를 찾지 못했습니다.")
           PY
           fi
+
+      - name: 하루에 한 가지 수정사항만 남도록 변경 범위 제한
+        if: steps.date_check.outputs.in_range == 'true'
+        id: narrow
+        run: |
+          set -e
+          mapfile -t changed_files < <(git diff --name-only)
+
+          if [ "${#changed_files[@]}" -eq 0 ]; then
+            echo "적용할 변경사항이 없습니다. 이번 실행은 커밋 없이 종료합니다."
+            exit 0
+          fi
+
+          # 오늘 커밋에 남길 파일 하나만 무작위로 고르고, 나머지 파일의 변경은 되돌린다.
+          chosen_file="$(printf '%s\n' "${changed_files[@]}" | shuf -n 1)"
+          echo "오늘 커밋할 파일: $chosen_file"
+
+          for f in "${changed_files[@]}"; do
+            if [ "$f" != "$chosen_file" ]; then
+              git checkout -- "$f"
+            fi
+          done
 
       - name: 변경사항 diff 저장
         if: steps.date_check.outputs.in_range == 'true'
