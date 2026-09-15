@@ -16,8 +16,8 @@ permissions:
 env:
   # 커밋 메시지 생성에 사용할 OpenAI 모델. 비용 효율적인 모델을 기본값으로 사용.
   OPENAI_MODEL: gpt-4o-mini
-  TRAVEL_START_DATE: "2026-09-14"
-  TRAVEL_END_DATE: "2026-09-16"
+  TRAVEL_START_DATE: "2026-09-28"
+  TRAVEL_END_DATE: "2026-10-02"
 
 jobs:
   auto-cleanup-commit:
