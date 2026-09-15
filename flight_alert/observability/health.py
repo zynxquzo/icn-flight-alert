@@ -48,9 +48,13 @@ async def check_scheduler(is_leader: bool) -> dict:
         if persisted:
             info["last_run_at"] = persisted["last_run_at"]
             info["last_run_status"] = persisted["last_run_status"]
+        cleanup_persisted = await flight_scheduler.get_persisted_cleanup_status()
+        if cleanup_persisted:
+            info["cleanup_last_run_at"] = cleanup_persisted["last_run_at"]
+            info["cleanup_last_run_status"] = cleanup_persisted["last_run_status"]
     if settings.enable_scheduler and not info["running"]:
         info["status"] = "fail"
-    elif info["last_run_status"] == "error":
+    elif info["last_run_status"] == "error" or info["cleanup_last_run_status"] == "error":
         info["status"] = "fail"
     else:
         info["status"] = "ok"

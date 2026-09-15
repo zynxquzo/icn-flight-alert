@@ -23,6 +23,8 @@ KST = timezone(timedelta(hours=9))
 SCHEDULER_LAST_RUN_KEY = "scheduler:refresh_flights:last_run_at"
 SCHEDULER_LAST_STATUS_KEY = "scheduler:refresh_flights:last_status"
 CLEANUP_LEADER_KEY = "scheduler:cleanup_expired_flights:leader"
+CLEANUP_LAST_RUN_KEY = "scheduler:cleanup_expired_flights:last_run_at"
+CLEANUP_LAST_STATUS_KEY = "scheduler:cleanup_expired_flights:last_status"
 
 
 class FlightScheduler:
@@ -34,21 +36,32 @@ class FlightScheduler:
         self._interval_minutes = 10
         self._last_run_at: datetime | None = None
         self._last_run_status: str | None = None  # ok | error | skipped
+        self._cleanup_last_run_at: datetime | None = None
+        self._cleanup_last_run_status: str | None = None  # ok | error | skipped
 
     def get_status(self) -> dict:
         last_at = self._last_run_at
         if last_at and last_at.tzinfo is None:
             last_at = last_at.replace(tzinfo=timezone.utc)
+        cleanup_last_at = self._cleanup_last_run_at
+        if cleanup_last_at and cleanup_last_at.tzinfo is None:
+            cleanup_last_at = cleanup_last_at.replace(tzinfo=timezone.utc)
         return {
             "running": self.is_running,
             "interval_minutes": self._interval_minutes,
             "last_run_at": last_at.isoformat() if last_at else None,
             "last_run_status": self._last_run_status,
+            "cleanup_last_run_at": cleanup_last_at.isoformat() if cleanup_last_at else None,
+            "cleanup_last_run_status": self._cleanup_last_run_status,
         }
 
     def _record_run(self, status: str) -> None:
         self._last_run_at = datetime.now(timezone.utc)
         self._last_run_status = status
+
+    def _record_cleanup_run(self, status: str) -> None:
+        self._cleanup_last_run_at = datetime.now(timezone.utc)
+        self._cleanup_last_run_status = status
 
     async def get_persisted_status(self) -> dict | None:
         """Redis에 기록된 마지막 실행 정보 조회 (리더가 아닌 인스턴스의 헬스체크용)."""
@@ -65,6 +78,21 @@ class FlightScheduler:
             return None
         return {"last_run_at": last_run_at, "last_run_status": last_run_status}
 
+    async def get_persisted_cleanup_status(self) -> dict | None:
+        """Redis에 기록된 비행편 정리 job의 마지막 실행 정보 조회 (리더가 아닌 인스턴스의 헬스체크용)."""
+        settings = get_settings()
+        if not settings.redis_enabled:
+            return None
+        client = await get_redis()
+        if client is None:
+            return None
+        last_run_at, last_run_status = await client.mget(
+            CLEANUP_LAST_RUN_KEY, CLEANUP_LAST_STATUS_KEY
+        )
+        if last_run_at is None and last_run_status is None:
+            return None
+        return {"last_run_at": last_run_at, "last_run_status": last_run_status}
+
     async def _persist_run_metadata(self, status: str) -> None:
         settings = get_settings()
         if not settings.redis_enabled:
@@ -76,6 +104,18 @@ class FlightScheduler:
         ttl = max(self._interval_minutes * 60 * 24, 3600)
         await client.set(SCHEDULER_LAST_RUN_KEY, now_iso, ex=ttl)
         await client.set(SCHEDULER_LAST_STATUS_KEY, status, ex=ttl)
+
+    async def _persist_cleanup_run_metadata(self, status: str) -> None:
+        settings = get_settings()
+        if not settings.redis_enabled:
+            return
+        client = await get_redis()
+        if client is None:
+            return
+        now_iso = datetime.now(timezone.utc).isoformat()
+        ttl = 24 * 3600 * 2
+        await client.set(CLEANUP_LAST_RUN_KEY, now_iso, ex=ttl)
+        await client.set(CLEANUP_LAST_STATUS_KEY, status, ex=ttl)
 
     async def _refresh_active_flights_async(self) -> None:
         ttl = max(self._interval_minutes * 60 - 30, 60)
@@ -168,10 +208,14 @@ class FlightScheduler:
             is_leader = await try_acquire_leader_lock(ttl_seconds=3600, key=CLEANUP_LEADER_KEY)
         except Exception:
             logger.exception("비행편 정리: 리더 락 획득 중 에러")
+            self._record_cleanup_run("error")
+            await self._persist_cleanup_run_metadata("error")
             return
 
         if not is_leader:
             logger.info("비행편 정리: 다른 인스턴스가 리더 — job 스킵")
+            self._record_cleanup_run("skipped")
+            await self._persist_cleanup_run_metadata("skipped")
             return
 
         from database import async_session_maker
@@ -197,8 +241,12 @@ class FlightScheduler:
                     retention_days,
                     deleted,
                 )
+            self._record_cleanup_run("ok")
+            await self._persist_cleanup_run_metadata("ok")
         except Exception:
             logger.exception("지난 비행편 정리 중 에러")
+            self._record_cleanup_run("error")
+            await self._persist_cleanup_run_metadata("error")
 
     def start(self, interval_minutes: int = 10):
         """스케줄러 시작"""
