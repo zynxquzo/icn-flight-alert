@@ -103,34 +103,34 @@ jobs:
           if git diff --quiet; then
             echo "autofix로 인한 변경이 없어, 안전한 사소한 개선(트레일링 공백/EOF 개행 정리)을 적용합니다."
             python3 - <<'PY'
-import pathlib
+          import pathlib
 
-exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".md", ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini"}
-skip_dirs = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".uv"}
-changed = False
+          exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".md", ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini"}
+          skip_dirs = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".uv"}
+          changed = False
 
-for path in pathlib.Path(".").rglob("*"):
-    if not path.is_file():
-        continue
-    if any(part in skip_dirs for part in path.parts):
-        continue
-    if path.suffix not in exts:
-        continue
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (UnicodeDecodeError, OSError):
-        continue
+          for path in pathlib.Path(".").rglob("*"):
+              if not path.is_file():
+                  continue
+              if any(part in skip_dirs for part in path.parts):
+                  continue
+              if path.suffix not in exts:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except (UnicodeDecodeError, OSError):
+                  continue
 
-    new_text = "\n".join(line.rstrip() for line in text.split("\n"))
-    if new_text and not new_text.endswith("\n"):
-        new_text += "\n"
+              new_text = "\n".join(line.rstrip() for line in text.split("\n"))
+              if new_text and not new_text.endswith("\n"):
+                  new_text += "\n"
 
-    if new_text != text:
-        path.write_text(new_text, encoding="utf-8")
-        changed = True
+              if new_text != text:
+                  path.write_text(new_text, encoding="utf-8")
+                  changed = True
 
-print("changed" if changed else "no-op")
-PY
+          print("changed" if changed else "no-op")
+          PY
           fi
 
       - name: 변경사항 diff 저장
@@ -151,59 +151,59 @@ PY
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python3 - <<'PY'
-import json
-import os
-import urllib.request
+          import json
+          import os
+          import urllib.request
 
-with open("/tmp/change.diff", "r", encoding="utf-8", errors="replace") as f:
-    diff = f.read()
+          with open("/tmp/change.diff", "r", encoding="utf-8", errors="replace") as f:
+              diff = f.read()
 
-# 토큰/요청 크기를 과도하게 키우지 않도록 diff를 적당히 자른다.
-max_chars = 12000
-truncated = diff[:max_chars]
+          # 토큰/요청 크기를 과도하게 키우지 않도록 diff를 적당히 자른다.
+          max_chars = 12000
+          truncated = diff[:max_chars]
 
-system_prompt = (
-    "너는 소프트웨어 저장소의 diff를 보고 한국어 Conventional Commit 메시지 한 줄을 "
-    "작성하는 어시스턴트다. 실제 diff 내용을 구체적으로 반영해서 "
-    "'fix(scope): 무엇을 왜 고쳤는지' 형식으로 작성한다. "
-    "'자동 커밋', 'auto commit', 'chore: update' 같이 내용이 없는 메시지는 절대 사용하지 않는다. "
-    "커밋 메시지 한 줄만 출력하고 다른 설명은 출력하지 않는다."
-)
-user_prompt = f"다음 git diff에 맞는 conventional commit 메시지를 한 줄로 작성해줘:\n\n{truncated}"
+          system_prompt = (
+              "너는 소프트웨어 저장소의 diff를 보고 한국어 Conventional Commit 메시지 한 줄을 "
+              "작성하는 어시스턴트다. 실제 diff 내용을 구체적으로 반영해서 "
+              "'fix(scope): 무엇을 왜 고쳤는지' 형식으로 작성한다. "
+              "'자동 커밋', 'auto commit', 'chore: update' 같이 내용이 없는 메시지는 절대 사용하지 않는다. "
+              "커밋 메시지 한 줄만 출력하고 다른 설명은 출력하지 않는다."
+          )
+          user_prompt = f"다음 git diff에 맞는 conventional commit 메시지를 한 줄로 작성해줘:\n\n{truncated}"
 
-payload = {
-    "model": os.environ["OPENAI_MODEL"],
-    "messages": [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ],
-    "temperature": 0.2,
-}
+          payload = {
+              "model": os.environ["OPENAI_MODEL"],
+              "messages": [
+                  {"role": "system", "content": system_prompt},
+                  {"role": "user", "content": user_prompt},
+              ],
+              "temperature": 0.2,
+          }
 
-req = urllib.request.Request(
-    "https://api.openai.com/v1/chat/completions",
-    data=json.dumps(payload).encode("utf-8"),
-    headers={
-        "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
-        "Content-Type": "application/json",
-    },
-    method="POST",
-)
+          req = urllib.request.Request(
+              "https://api.openai.com/v1/chat/completions",
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
 
-with urllib.request.urlopen(req, timeout=60) as resp:
-    body = json.loads(resp.read().decode("utf-8"))
+          with urllib.request.urlopen(req, timeout=60) as resp:
+              body = json.loads(resp.read().decode("utf-8"))
 
-message = body["choices"][0]["message"]["content"].strip().splitlines()[0].strip()
-if not message:
-    raise SystemExit("OpenAI 응답에서 커밋 메시지를 얻지 못했습니다.")
+          message = body["choices"][0]["message"]["content"].strip().splitlines()[0].strip()
+          if not message:
+              raise SystemExit("OpenAI 응답에서 커밋 메시지를 얻지 못했습니다.")
 
-with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-    f.write("message<<COMMIT_MSG_EOF\n")
-    f.write(message + "\n")
-    f.write("COMMIT_MSG_EOF\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write("message<<COMMIT_MSG_EOF\n")
+              f.write(message + "\n")
+              f.write("COMMIT_MSG_EOF\n")
 
-print("생성된 커밋 메시지:", message)
-PY
+          print("생성된 커밋 메시지:", message)
+          PY
 
       - name: 커밋 및 푸시
         if: steps.date_check.outputs.in_range == 'true' && steps.diff.outputs.has_diff == 'true'
