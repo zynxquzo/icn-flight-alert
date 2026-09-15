@@ -1,9 +1,9 @@
 # ICN Flight Alert — API 명세서 (API Specification)
 
-> **Base URL**: 배포 환경에 따라 설정 (로컬 예: `http://127.0.0.1:8000`)  
-> **인증 방식**: Bearer Token (JWT), 엔드포인트별 상이 (아래 각 절 참고)  
-> **응답 형식**: JSON  
-> **문자 인코딩**: UTF-8 (문서·요청 본문은 UTF-8 권장)  
+> **Base URL**: 배포 환경에 따라 설정 (로컬 예: `http://127.0.0.1:8000`)
+> **인증 방식**: Bearer Token (JWT), 엔드포인트별 상이 (아래 각 절 참고)
+> **응답 형식**: JSON
+> **문자 인코딩**: UTF-8 (문서·요청 본문은 UTF-8 권장)
 > **OpenAPI**: `/docs` (Swagger UI), `/redoc`
 
 애플리케이션 엔트리: `main.py`. DB는 PostgreSQL (`DATABASE_URL`), 스키마는 `flight_alert/models/` 와 대응합니다.
@@ -323,7 +323,7 @@ Authorization: Bearer {access_token}
 
 ## 5. 비행편 (Flights)
 
-모든 경로는 라우터 prefix **`/flights`** 입니다.  
+모든 경로는 라우터 prefix **`/flights`** 입니다.
 `{flight_pk}` 는 정수 PK입니다.
 
 ---
