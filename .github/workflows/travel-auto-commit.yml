@@ -1,0 +1,215 @@
+name: 여행 기간 한정 자동 코드 정리 커밋
+
+# 2026-09-28 ~ 2026-10-02(KST) 사이에만 동작하는 한시적 워크플로.
+# 매일 사소한 린트/포맷 autofix를 적용하고, diff에 맞는 커밋 메시지를 OpenAI API로 생성해 커밋/푸시한다.
+# 여행이 끝나면 이 파일을 삭제하면 된다 (README 참고).
+
+on:
+  schedule:
+    # 매일 KST 09:00 = UTC 00:00
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  # 커밋 메시지 생성에 사용할 OpenAI 모델. 비용 효율적인 모델을 기본값으로 사용.
+  OPENAI_MODEL: gpt-4o-mini
+  TRAVEL_START_DATE: "2026-09-28"
+  TRAVEL_END_DATE: "2026-10-02"
+
+jobs:
+  auto-cleanup-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 오늘이 여행 기간(KST)인지 확인
+        id: date_check
+        run: |
+          today="$(TZ=Asia/Seoul date +%F)"
+          echo "today(KST)=$today"
+          if [[ "$today" < "$TRAVEL_START_DATE" || "$today" > "$TRAVEL_END_DATE" ]]; then
+            echo "여행 기간(${TRAVEL_START_DATE} ~ ${TRAVEL_END_DATE})이 아니므로 종료합니다."
+            echo "in_range=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "in_range=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.date_check.outputs.in_range == 'true'
+        with:
+          fetch-depth: 1
+
+      - name: OPENAI_API_KEY 시크릿 확인
+        if: steps.date_check.outputs.in_range == 'true'
+        run: |
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "::error::secrets.OPENAI_API_KEY 가 설정되어 있지 않습니다. 저장소 Settings > Secrets and variables > Actions 에서 등록해주세요."
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v5
+        if: steps.date_check.outputs.in_range == 'true'
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        if: steps.date_check.outputs.in_range == 'true'
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        if: steps.date_check.outputs.in_range == 'true'
+        with:
+          node-version: "20"
+
+      - name: 저장소 스택 감지 및 autofix 실행
+        if: steps.date_check.outputs.in_range == 'true'
+        run: |
+          set -e
+          ran_any=false
+
+          if [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ]; then
+            echo "Python 스택 감지 -> ruff --fix, black 실행"
+            uvx ruff check --fix . || true
+            uvx black . || true
+            ran_any=true
+          fi
+
+          if [ -f package.json ]; then
+            echo "JS/TS 스택 감지 -> eslint --fix, prettier --write 실행"
+            if [ -f package-lock.json ]; then
+              npm ci || npm install
+            elif [ -f pnpm-lock.yaml ]; then
+              corepack enable && pnpm install --frozen-lockfile || pnpm install
+            elif [ -f yarn.lock ]; then
+              corepack enable && yarn install --frozen-lockfile || yarn install
+            else
+              npm install
+            fi
+            npx --yes eslint --fix . || true
+            npx --yes prettier --write . || true
+            ran_any=true
+          fi
+
+          if [ "$ran_any" = "false" ]; then
+            echo "인식된 언어/린트 스택이 없습니다. autofix 단계를 건너뜁니다."
+          fi
+
+      - name: autofix로 변경이 없으면 안전한 사소한 개선 적용
+        if: steps.date_check.outputs.in_range == 'true'
+        run: |
+          set -e
+          if git diff --quiet; then
+            echo "autofix로 인한 변경이 없어, 안전한 사소한 개선(트레일링 공백/EOF 개행 정리)을 적용합니다."
+            python3 - <<'PY'
+import pathlib
+
+exts = {".py", ".js", ".jsx", ".ts", ".tsx", ".md", ".yml", ".yaml", ".json", ".toml", ".cfg", ".ini"}
+skip_dirs = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".uv"}
+changed = False
+
+for path in pathlib.Path(".").rglob("*"):
+    if not path.is_file():
+        continue
+    if any(part in skip_dirs for part in path.parts):
+        continue
+    if path.suffix not in exts:
+        continue
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        continue
+
+    new_text = "\n".join(line.rstrip() for line in text.split("\n"))
+    if new_text and not new_text.endswith("\n"):
+        new_text += "\n"
+
+    if new_text != text:
+        path.write_text(new_text, encoding="utf-8")
+        changed = True
+
+print("changed" if changed else "no-op")
+PY
+          fi
+
+      - name: 변경사항 diff 저장
+        if: steps.date_check.outputs.in_range == 'true'
+        id: diff
+        run: |
+          if git diff --quiet; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            git diff > /tmp/change.diff
+          fi
+
+      - name: OpenAI API로 커밋 메시지 생성
+        if: steps.date_check.outputs.in_range == 'true' && steps.diff.outputs.has_diff == 'true'
+        id: gen_message
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python3 - <<'PY'
+import json
+import os
+import urllib.request
+
+with open("/tmp/change.diff", "r", encoding="utf-8", errors="replace") as f:
+    diff = f.read()
+
+# 토큰/요청 크기를 과도하게 키우지 않도록 diff를 적당히 자른다.
+max_chars = 12000
+truncated = diff[:max_chars]
+
+system_prompt = (
+    "너는 소프트웨어 저장소의 diff를 보고 한국어 Conventional Commit 메시지 한 줄을 "
+    "작성하는 어시스턴트다. 실제 diff 내용을 구체적으로 반영해서 "
+    "'fix(scope): 무엇을 왜 고쳤는지' 형식으로 작성한다. "
+    "'자동 커밋', 'auto commit', 'chore: update' 같이 내용이 없는 메시지는 절대 사용하지 않는다. "
+    "커밋 메시지 한 줄만 출력하고 다른 설명은 출력하지 않는다."
+)
+user_prompt = f"다음 git diff에 맞는 conventional commit 메시지를 한 줄로 작성해줘:\n\n{truncated}"
+
+payload = {
+    "model": os.environ["OPENAI_MODEL"],
+    "messages": [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ],
+    "temperature": 0.2,
+}
+
+req = urllib.request.Request(
+    "https://api.openai.com/v1/chat/completions",
+    data=json.dumps(payload).encode("utf-8"),
+    headers={
+        "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
+        "Content-Type": "application/json",
+    },
+    method="POST",
+)
+
+with urllib.request.urlopen(req, timeout=60) as resp:
+    body = json.loads(resp.read().decode("utf-8"))
+
+message = body["choices"][0]["message"]["content"].strip().splitlines()[0].strip()
+if not message:
+    raise SystemExit("OpenAI 응답에서 커밋 메시지를 얻지 못했습니다.")
+
+with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+    f.write("message<<COMMIT_MSG_EOF\n")
+    f.write(message + "\n")
+    f.write("COMMIT_MSG_EOF\n")
+
+print("생성된 커밋 메시지:", message)
+PY
+
+      - name: 커밋 및 푸시
+        if: steps.date_check.outputs.in_range == 'true' && steps.diff.outputs.has_diff == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "${{ steps.gen_message.outputs.message }}"
+          git push
