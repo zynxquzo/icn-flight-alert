@@ -27,7 +27,7 @@ def _max_tool_rounds() -> int:
         return 5
 
 
-def _wait_str(wait_time_hours: float | int | None) -> str:
+def _wait_str(wait_time_hours: float | None) -> str:
     if wait_time_hours is None:
         return "미지정"
     try:
@@ -55,7 +55,7 @@ async def run_rag_agent(
     *,
     user_message: str,
     default_terminal: str,
-    wait_time_hours: float | int | None,
+    wait_time_hours: float | None,
     user_context: str = "",
 ) -> tuple[str, list[dict[str, Any]], list[str]]:
     """최종 답변, 출처 목록, 호출된 도구 이름 순서."""

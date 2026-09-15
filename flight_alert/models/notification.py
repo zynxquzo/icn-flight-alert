@@ -4,12 +4,14 @@ Notification Model
 비행편 변경 알림 이력을 저장하는 테이블
 """
 
-from datetime import datetime
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, Enum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from database import Base
-from typing import TYPE_CHECKING
 import enum
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from database import Base
 
 if TYPE_CHECKING:
     from .flight import Flight
@@ -17,6 +19,7 @@ if TYPE_CHECKING:
 
 class NotificationType(enum.Enum):
     """알림 타입 ENUM"""
+
     delay = "delay"
     gate_change = "gate_change"
     cancel = "cancel"
@@ -25,28 +28,26 @@ class NotificationType(enum.Enum):
 
 class Notification(Base):
     """알림 테이블"""
+
     __tablename__ = "notifications"
 
     # Primary Key
     notification_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    
+
     # Foreign Key
     flight_pk: Mapped[int] = mapped_column(
-        ForeignKey("flights.flight_pk", ondelete="CASCADE"), 
-        nullable=False, 
-        index=True
+        ForeignKey("flights.flight_pk", ondelete="CASCADE"), nullable=False, index=True
     )
-    
+
     # Notification Information
     notification_type: Mapped[NotificationType] = mapped_column(
-        Enum(NotificationType), 
-        nullable=False
+        Enum(NotificationType), nullable=False
     )
     message: Mapped[str | None] = mapped_column(String, nullable=True)
-    
+
     # Recipient Information
     sent_to: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    
+
     # Sending Status
     sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_sent: Mapped[bool] = mapped_column(Boolean, default=False)

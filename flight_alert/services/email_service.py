@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     """이메일 발송 서비스"""
-    
+
     SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USERNAME = os.getenv("SMTP_USERNAME")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
     SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL")
-    
+
     @classmethod
     def send_notification_email(
         cls,
@@ -36,13 +36,13 @@ class EmailService:
         flight_id: str = None,
     ) -> bool:
         """비행편 알림 이메일 발송
-        
+
         Args:
             to_email: 받는 사람 이메일
             subject: 이메일 제목
             message: 이메일 본문
             flight_id: 비행편명 (선택)
-        
+
         Returns:
             bool: 발송 성공 여부
         """
@@ -50,41 +50,41 @@ class EmailService:
         if not all([cls.SMTP_USERNAME, cls.SMTP_PASSWORD, cls.SMTP_FROM_EMAIL]):
             logger.error("SMTP 환경 변수가 설정되지 않았습니다")
             return False
-        
+
         try:
             # 이메일 메시지 생성
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = cls.SMTP_FROM_EMAIL
-            msg['To'] = to_email
-            
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = cls.SMTP_FROM_EMAIL
+            msg["To"] = to_email
+
             # HTML 본문 생성
             html_body = cls._create_html_body(message, flight_id)
-            
+
             # 텍스트 버전과 HTML 버전 추가
-            text_part = MIMEText(message, 'plain', 'utf-8')
-            html_part = MIMEText(html_body, 'html', 'utf-8')
-            
+            text_part = MIMEText(message, "plain", "utf-8")
+            html_part = MIMEText(html_body, "html", "utf-8")
+
             msg.attach(text_part)
             msg.attach(html_part)
-            
+
             # SMTP 서버 연결 및 발송
             with smtplib.SMTP(cls.SMTP_HOST, cls.SMTP_PORT) as server:
                 server.starttls()  # TLS 암호화
                 server.login(cls.SMTP_USERNAME, cls.SMTP_PASSWORD)
                 server.send_message(msg)
-            
+
             logger.info("✅ 이메일 발송 성공: to=%s, subject=%s", to_email, subject)
             return True
-            
+
         except smtplib.SMTPAuthenticationError:
             logger.error("❌ SMTP 인증 실패 - 이메일/비밀번호 확인 필요")
             return False
-        
+
         except smtplib.SMTPException as e:
             logger.error("❌ SMTP 에러: %s", e)
             return False
-        
+
         except Exception as e:
             logger.error("❌ 이메일 발송 실패: %s", e, exc_info=True)
             return False
@@ -128,9 +128,11 @@ class EmailService:
         """HTML 이메일 본문 생성"""
         message = html.escape(message)
         flight_info = (
-            f"<p><strong>항공편:</strong> {html.escape(flight_id)}</p>" if flight_id else ""
+            f"<p><strong>항공편:</strong> {html.escape(flight_id)}</p>"
+            if flight_id
+            else ""
         )
-        
+
         html_body = f"""
         <html>
             <head>

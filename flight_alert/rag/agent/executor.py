@@ -77,7 +77,12 @@ async def execute_agent_tool(
         if name == "search_airport_docs":
             q = (args.get("query") or "").strip()
             if not q:
-                return json.dumps({"documents": [], "error": "empty_query"}, ensure_ascii=False), []
+                return (
+                    json.dumps(
+                        {"documents": [], "error": "empty_query"}, ensure_ascii=False
+                    ),
+                    [],
+                )
             top_k = _parse_int(args.get("top_k"), 6, 1, 20)
             category = (args.get("category") or "").strip() or None
             relax = _parse_bool(args.get("relax_terminal"), False)
@@ -104,11 +109,19 @@ async def execute_agent_tool(
         if name == "search_airport_docs_keyword":
             q = (args.get("query") or "").strip()
             if len(q) < 2:
-                return json.dumps({"documents": [], "error": "query_too_short"}, ensure_ascii=False), []
+                return (
+                    json.dumps(
+                        {"documents": [], "error": "query_too_short"},
+                        ensure_ascii=False,
+                    ),
+                    [],
+                )
             top_k = _parse_int(args.get("top_k"), 8, 1, 30)
             category = (args.get("category") or "").strip() or None
             term_arg = (args.get("terminal") or "").strip().upper() or None
-            terminal = term_arg if term_arg in ("T1", "T2", "CONCOURSE") else default_terminal
+            terminal = (
+                term_arg if term_arg in ("T1", "T2", "CONCOURSE") else default_terminal
+            )
             docs = await vector_repository.search_keyword_documents(
                 db,
                 q,
@@ -130,22 +143,43 @@ async def execute_agent_tool(
         if name == "get_airport_document":
             doc_id = (args.get("doc_id") or "").strip()
             if not doc_id:
-                return json.dumps({"document": None, "error": "missing_doc_id"}, ensure_ascii=False), []
+                return (
+                    json.dumps(
+                        {"document": None, "error": "missing_doc_id"},
+                        ensure_ascii=False,
+                    ),
+                    [],
+                )
             doc = await vector_repository.get_document_by_id(db, doc_id)
             if not doc:
-                return json.dumps({"document": None, "found": False}, ensure_ascii=False), []
+                return (
+                    json.dumps({"document": None, "found": False}, ensure_ascii=False),
+                    [],
+                )
             d = _doc_public_dict(doc)
-            sources = [{"doc_id": doc.doc_id, "title": doc.title, "source_url": doc.source_url}]
-            return json.dumps({"document": d, "found": True}, ensure_ascii=False), sources
+            sources = [
+                {"doc_id": doc.doc_id, "title": doc.title, "source_url": doc.source_url}
+            ]
+            return (
+                json.dumps({"document": d, "found": True}, ensure_ascii=False),
+                sources,
+            )
 
         if name == "search_airport_docs_hybrid":
             q = (args.get("query") or "").strip()
             if not q:
-                return json.dumps({"documents": [], "error": "empty_query"}, ensure_ascii=False), []
+                return (
+                    json.dumps(
+                        {"documents": [], "error": "empty_query"}, ensure_ascii=False
+                    ),
+                    [],
+                )
             top_k = _parse_int(args.get("top_k"), 6, 1, 20)
             category = (args.get("category") or "").strip() or None
             term_arg = (args.get("terminal") or "").strip().upper() or None
-            terminal = term_arg if term_arg in ("T1", "T2", "CONCOURSE") else default_terminal
+            terminal = (
+                term_arg if term_arg in ("T1", "T2", "CONCOURSE") else default_terminal
+            )
 
             emb = await generate_embedding(q)
             docs = await search_hybrid_documents(

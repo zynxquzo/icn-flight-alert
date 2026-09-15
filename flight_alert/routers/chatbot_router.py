@@ -114,7 +114,9 @@ async def get_session(
     """특정 세션의 전체 메시지 조회."""
     session = await chat_repository.get_session(db, session_id, current_user.user_id)
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다."
+        )
     return ChatSessionOut.model_validate(session)
 
 
@@ -127,7 +129,9 @@ async def delete_session(
     """채팅 세션 및 모든 메시지 삭제."""
     deleted = await chat_repository.delete_session(db, session_id, current_user.user_id)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다."
+        )
     await db.commit()
 
 
@@ -148,7 +152,9 @@ async def send_session_message(
     """
     session = await chat_repository.get_session(db, session_id, current_user.user_id)
     if not session:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다."
+        )
 
     outcome = await chatbot_service.chat(
         message=request.message,

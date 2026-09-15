@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import run_alembic_on_app_startup
 from flight_alert.config import get_settings
+from flight_alert.exception_handlers import register_exception_handlers
 from flight_alert.infrastructure.redis_client import close_redis
 from flight_alert.logging_config import setup_logging
 from flight_alert.middleware.request_id import RequestIdMiddleware, get_request_id
@@ -22,7 +23,6 @@ from flight_alert.routers.chatbot_router import router as chatbot_router
 from flight_alert.routers.flight_router import router as flight_router
 from flight_alert.routers.notification_router import router as notification_router
 from flight_alert.routers.user_router import router as user_router
-from flight_alert.exception_handlers import register_exception_handlers
 from flight_alert.services.scheduler_service import flight_scheduler
 
 setup_logging()

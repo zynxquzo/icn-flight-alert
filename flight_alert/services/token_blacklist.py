@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import threading
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flight_alert.config import get_settings
 from flight_alert.infrastructure.redis_client import get_redis
@@ -18,7 +18,7 @@ BLACKLIST_KEY_PREFIX = "jwt:blacklist:"
 
 
 def _ttl_seconds(exp_unix: float) -> int:
-    remaining = int(exp_unix - datetime.now(timezone.utc).timestamp())
+    remaining = int(exp_unix - datetime.now(UTC).timestamp())
     return max(remaining, 1)
 
 
@@ -39,7 +39,7 @@ class MemoryTokenBlacklist(TokenBlacklistBackend):
         self._lock = threading.Lock()
 
     def _purge_unlocked(self) -> None:
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         dead = [jti for jti, exp_ts in self._entries.items() if exp_ts <= now]
         for jti in dead:
             del self._entries[jti]
@@ -110,7 +110,7 @@ class TokenBlacklist:
         return await self._backend.is_revoked(jti)
 
     async def revoke(self, jti: str, exp_unix: float) -> None:
-        if exp_unix <= datetime.now(timezone.utc).timestamp():
+        if exp_unix <= datetime.now(UTC).timestamp():
             return
         await self._backend.revoke(jti, exp_unix)
 

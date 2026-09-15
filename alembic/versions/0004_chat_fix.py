@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import uuid
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect, text
+
+from alembic import op
 
 revision = "0004_chat_fix"
 down_revision = "0003_flight_ext"
@@ -26,20 +27,25 @@ def _table_exists(bind, table_name: str) -> bool:
 def _column_exists(bind, table_name: str, column_name: str) -> bool:
     if not _table_exists(bind, table_name):
         return False
-    return any(col["name"] == column_name for col in inspect(bind).get_columns(table_name))
+    return any(
+        col["name"] == column_name for col in inspect(bind).get_columns(table_name)
+    )
 
 
 def _index_exists(bind, table_name: str, index_name: str) -> bool:
     if not _table_exists(bind, table_name):
         return False
-    return any(idx["name"] == index_name for idx in inspect(bind).get_indexes(table_name))
+    return any(
+        idx["name"] == index_name for idx in inspect(bind).get_indexes(table_name)
+    )
 
 
 def _constraint_exists(bind, table_name: str, constraint_name: str) -> bool:
     if not _table_exists(bind, table_name):
         return False
     return any(
-        fk["name"] == constraint_name for fk in inspect(bind).get_foreign_keys(table_name)
+        fk["name"] == constraint_name
+        for fk in inspect(bind).get_foreign_keys(table_name)
     )
 
 
@@ -62,43 +68,45 @@ def upgrade() -> None:
 
     # 기존 레거시 메시지는 user_id 기준으로 세션 1개에 묶습니다 (user_id 컬럼이 남아있는 DB에서만 해당).
     if _column_exists(bind, "chat_messages", "user_id"):
-        result = bind.execute(text("select distinct user_id from chat_messages order by user_id"))
+        result = bind.execute(
+            text("select distinct user_id from chat_messages order by user_id")
+        )
         user_ids = [row[0] for row in result.fetchall()]
 
         for user_id in user_ids:
             existing_session_id = bind.execute(
-                text("select session_id from chat_sessions where user_id = :user_id limit 1"),
+                text(
+                    "select session_id from chat_sessions where user_id = :user_id limit 1"
+                ),
                 {"user_id": user_id},
             ).scalar()
             if not existing_session_id:
                 first_user_message = bind.execute(
-                    text(
-                        """
+                    text("""
                         select content
                         from chat_messages
                         where user_id = :user_id and role = 'user'
                         order by created_at asc, chat_message_id asc
                         limit 1
-                        """
-                    ),
+                        """),
                     {"user_id": user_id},
                 ).scalar()
                 session_id = str(uuid.uuid4())
                 title = (first_user_message or "기존 채팅 기록")[:80]
                 bind.execute(
-                    text(
-                        """
+                    text("""
                         insert into chat_sessions (session_id, user_id, title, terminal)
                         values (:session_id, :user_id, :title, 'T1')
-                        """
-                    ),
+                        """),
                     {"session_id": session_id, "user_id": user_id, "title": title},
                 )
             else:
                 session_id = existing_session_id
 
             bind.execute(
-                text("update chat_messages set session_id = :session_id where user_id = :user_id"),
+                text(
+                    "update chat_messages set session_id = :session_id where user_id = :user_id"
+                ),
                 {"session_id": session_id, "user_id": user_id},
             )
 

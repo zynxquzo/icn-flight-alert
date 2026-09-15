@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from flight_alert.exceptions import NotFoundException
 from flight_alert.repositories.flight_repository import flight_repository
 from flight_alert.repositories.notification_repository import notification_repository
-from flight_alert.services.flight_service import flight_service
 from flight_alert.schemas.notification import (
     NotificationListResponse,
     NotificationResponse,
 )
+from flight_alert.services.flight_service import flight_service
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,9 @@ class NotificationService:
         """특정 비행편의 알림 목록 조회"""
         flight = await flight_repository.find_by_id(db, flight_pk)
         if not flight:
-            raise NotFoundException(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
+            raise NotFoundException(
+                f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})"
+            )
 
         notifications = await notification_repository.find_by_flight_pk(db, flight_pk)
 

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select, update
@@ -96,7 +96,7 @@ class ChatRepository:
         await db.execute(
             update(ChatSession)
             .where(ChatSession.session_id == session_id)
-            .values(updated_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            .values(updated_at=datetime.now(UTC).replace(tzinfo=None))
         )
         await db.flush()
         await db.refresh(msg)
@@ -108,7 +108,7 @@ class ChatRepository:
         await db.execute(
             update(ChatSession)
             .where(ChatSession.session_id == session_id)
-            .values(title=title, updated_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            .values(title=title, updated_at=datetime.now(UTC).replace(tzinfo=None))
         )
 
     async def set_feedback(

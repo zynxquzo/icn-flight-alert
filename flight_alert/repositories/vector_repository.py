@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import math
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -50,7 +50,7 @@ async def upsert_document(
     if db is None:
         raise ValueError("PostgreSQL 모드에서는 db 세션이 필요합니다")
     doc_id = payload["doc_id"]
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     existing = await db.scalar(
         select(AirportDocument).where(AirportDocument.doc_id == doc_id)
     )

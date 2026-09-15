@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flight_alert.services.chatbot_service import ChatbotService  # noqa: E402
+from flight_alert.services.chatbot_service import ChatbotService
 
 RESULTS_PATH = Path(__file__).resolve().parent / "eval_rag_grounding_results.json"
 
@@ -187,7 +187,9 @@ class GradedAnswer:
     floor_correct: bool | None  # None = 층수를 언급하지 않음(판단 불가)
 
 
-def _grade(response: str, expected_floor: str, expected_keywords: list[str]) -> GradedAnswer:
+def _grade(
+    response: str, expected_floor: str, expected_keywords: list[str]
+) -> GradedAnswer:
     norm_resp = _normalize(response)
     matched = [kw for kw in expected_keywords if _normalize(kw) in norm_resp]
     hit_rate = len(matched) / len(expected_keywords) if expected_keywords else 0.0
@@ -228,7 +230,9 @@ async def main() -> None:
         legacy_graded.mode = legacy_mode
 
         os.environ["RAG_ENABLED"] = "true"
-        os.environ["RAG_AGENT_ENABLED"] = "false"  # 단순 RAG로 고정(에이전트 도구 호출 배제, 공정 비교)
+        os.environ["RAG_AGENT_ENABLED"] = (
+            "false"  # 단순 RAG로 고정(에이전트 도구 호출 배제, 공정 비교)
+        )
         rag_mode, rag_text = await _run_one(service, q["question"])
         rag_graded = _grade(rag_text, q["expected_floor"], q["expected_keywords"])
         rag_graded.mode = rag_mode
@@ -264,7 +268,9 @@ async def main() -> None:
     summary = {"legacy": summarize("legacy"), "rag": summarize("rag")}
 
     out = {"summary": summary, "results": results}
-    RESULTS_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    RESULTS_PATH.write_text(
+        json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     print("\n=== 요약 ===")
     print(json.dumps(summary, ensure_ascii=False, indent=2))

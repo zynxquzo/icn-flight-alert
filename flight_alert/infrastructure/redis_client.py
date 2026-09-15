@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_client: "aioredis.Redis | None" = None
+_client: aioredis.Redis | None = None
 
 
-async def get_redis() -> "aioredis.Redis | None":
+async def get_redis() -> aioredis.Redis | None:
     """REDIS_URL이 설정된 경우에만 클라이언트를 반환합니다."""
     global _client
     settings = get_settings()

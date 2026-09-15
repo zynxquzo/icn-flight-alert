@@ -5,26 +5,27 @@ SQLAlchemy ORM 모델들을 정의합니다.
 """
 
 from database import Base
+
 from .airport_document import AirportDocument
 from .chat_session import ChatMessage, ChatSession
 from .flight import Flight
 from .flight_status_log import FlightStatusLog
 from .notification import Notification, NotificationType
-from .user import User
 from .refresh_token import RefreshToken
-from .user_security_token import UserSecurityToken, SecurityTokenKind
+from .user import User
+from .user_security_token import SecurityTokenKind, UserSecurityToken
 
 __all__ = [
-    "Base",
     "AirportDocument",
+    "Base",
     "ChatMessage",
     "ChatSession",
     "Flight",
     "FlightStatusLog",
     "Notification",
     "NotificationType",
-    "User",
     "RefreshToken",
-    "UserSecurityToken",
     "SecurityTokenKind",
+    "User",
+    "UserSecurityToken",
 ]

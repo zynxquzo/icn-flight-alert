@@ -27,7 +27,7 @@ def env_float(name: str, default: float) -> float:
 
 
 @lru_cache
-def get_settings() -> "Settings":
+def get_settings() -> Settings:
     return Settings()
 
 
@@ -47,7 +47,9 @@ class Settings:
     enable_scheduler: bool = env_bool("ENABLE_SCHEDULER", default=True)
     scheduler_interval_minutes: int = int(os.getenv("SCHEDULER_INTERVAL_MINUTES", "10"))
     scheduler_leader_lock: bool = env_bool("SCHEDULER_LEADER_LOCK", default=True)
-    expired_flight_retention_days: int = int(os.getenv("EXPIRED_FLIGHT_RETENTION_DAYS", "7"))
+    expired_flight_retention_days: int = int(
+        os.getenv("EXPIRED_FLIGHT_RETENTION_DAYS", "7")
+    )
 
     # 관측
     log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()

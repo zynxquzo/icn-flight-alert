@@ -92,7 +92,7 @@ def _gate_nearby(location: str | None) -> str | None:
 
 
 def _make_doc_id(prefix: str, title: str, location: str | None) -> str:
-    h = hashlib.md5(f"{title}|{location or ''}".encode("utf-8")).hexdigest()[:10]
+    h = hashlib.md5(f"{title}|{location or ''}".encode()).hexdigest()[:10]
     return f"{prefix}_{_slug(title, 32)}_{h}"
 
 
@@ -100,11 +100,7 @@ def _html_to_text(html: str) -> str:
     soup = BeautifulSoup(html, "lxml")
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
-    main = (
-        soup.select_one("#contents, #content, .contents, main")
-        or soup.body
-        or soup
-    )
+    main = soup.select_one("#contents, #content, .contents, main") or soup.body or soup
     return main.get_text("\n", strip=True)
 
 
@@ -116,7 +112,9 @@ def parse_facility_html(
 ) -> list[dict[str, Any]]:
     """편의 · 공공시설 HTML → 문서 dict 리스트."""
     text = _html_to_text(html)
-    return parse_facility_text(text, source_url=source_url, default_terminal=default_terminal)
+    return parse_facility_text(
+        text, source_url=source_url, default_terminal=default_terminal
+    )
 
 
 def parse_facility_text(
@@ -160,7 +158,14 @@ def parse_facility_text(
                     hours = body
                 elif _PHONE_RE.match(body.replace(" ", "")):
                     contact = body
-                elif "터미널" in body or "층" in body or "게이트" in body or "출입구" in body or "출국장" in body or "입국장" in body:
+                elif (
+                    "터미널" in body
+                    or "층" in body
+                    or "게이트" in body
+                    or "출입구" in body
+                    or "출국장" in body
+                    or "입국장" in body
+                ):
                     location = body
                 else:
                     extra.append(body)
@@ -224,11 +229,21 @@ def parse_food_text(text: str, *, source_url: str) -> list[dict[str, Any]]:
     while i < len(lines):
         line = lines[i]
         if re.search(r"제[12]여객터미널|탑승동", line) and any(
-            x in line for x in ("층", "면세", "일반", "게이트", "출국", "식당", "카페", "푸드")
+            x in line
+            for x in ("층", "면세", "일반", "게이트", "출국", "식당", "카페", "푸드")
         ):
             location = line
             title = lines[i - 1] if i > 0 else "매장"
-            if title in ("식음료", "한식", "양식", "일식", "중식", "카페", "디저트", "패스트푸드"):
+            if title in (
+                "식음료",
+                "한식",
+                "양식",
+                "일식",
+                "중식",
+                "카페",
+                "디저트",
+                "패스트푸드",
+            ):
                 if i + 1 < len(lines):
                     title = lines[i + 1]
             sub = "cafe"

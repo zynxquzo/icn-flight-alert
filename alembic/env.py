@@ -10,9 +10,10 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -20,8 +21,8 @@ if str(ROOT) not in sys.path:
 
 load_dotenv(ROOT / ".env")
 
-from database import Base  # noqa: E402
-import flight_alert.models  # noqa: E402, F401 — 모델 등록
+import flight_alert.models  # noqa: F401 — 모델 등록
+from database import Base
 
 config = context.config
 

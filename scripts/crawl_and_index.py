@@ -25,22 +25,24 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import flight_alert.models  # noqa: F401, E402 — ORM 메타데이터에 airport_documents 등 등록
-from database import async_session_maker, run_alembic_upgrade  # noqa: E402
+import flight_alert.models  # noqa: F401 — ORM 메타데이터에 airport_documents 등 등록
+from database import async_session_maker, run_alembic_upgrade
 from flight_alert.repositories.vector_repository import (
     upsert_document,
     use_chroma_backend,
-)  # noqa: E402
-from flight_alert.services.crawler_service import (  # noqa: E402
+)
+from flight_alert.services.crawler_service import (
     crawl_airport_facilities,
     crawl_airport_food,
 )
-from flight_alert.services.document_parser_service import (  # noqa: E402
+from flight_alert.services.document_parser_service import (
     build_embedding_text,
     parse_facility_html,
     parse_food_html,
 )
-from flight_alert.services.embedding_service import generate_embedding_sync  # noqa: E402
+from flight_alert.services.embedding_service import (
+    generate_embedding_sync,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -71,7 +73,11 @@ async def _index_docs(docs: list[dict], label: str) -> int:
         for doc in docs:
             text = build_embedding_text(doc)
             emb = generate_embedding_sync(text)
-            payload = {**doc, "embedding": emb, "content_hash": _compute_content_hash(doc)}
+            payload = {
+                **doc,
+                "embedding": emb,
+                "content_hash": _compute_content_hash(doc),
+            }
             await upsert_document(None, payload)
             n += 1
         logger.info("%s: %s개 문서 인덱싱 완료 (Chroma)", label, n)

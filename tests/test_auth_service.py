@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
@@ -25,14 +25,14 @@ def svc() -> AuthService:
 class TestJwtBlacklist:
     @pytest.mark.asyncio
     async def test_revoked_jti_detected(self, svc: AuthService):
-        exp = datetime.now(timezone.utc).timestamp() + 3600
+        exp = datetime.now(UTC).timestamp() + 3600
         await svc._add_to_blacklist("jti-abc", exp)
         assert await svc._is_jti_revoked("jti-abc") is True
         assert await svc._is_jti_revoked("jti-other") is False
 
     @pytest.mark.asyncio
     async def test_expired_jti_purged(self, svc: AuthService):
-        past = datetime.now(timezone.utc).timestamp() - 10
+        past = datetime.now(UTC).timestamp() - 10
         await svc._add_to_blacklist("jti-old", past)
         assert await svc._is_jti_revoked("jti-old") is False
 
@@ -42,7 +42,7 @@ class TestJwtBlacklist:
             {
                 "sub": "1",
                 "jti": "logout-jti",
-                "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+                "exp": datetime.now(UTC) + timedelta(hours=1),
             },
             SECRET_KEY,
             algorithm=ALGORITHM,
@@ -73,7 +73,9 @@ async def test_refresh_tokens_rotates_and_issues_new_pair():
             new_callable=AsyncMock,
         ) as mock_add,
     ):
-        access, refresh = await auth_service.refresh_tokens(mock_db, "plain-refresh-token")
+        access, refresh = await auth_service.refresh_tokens(
+            mock_db, "plain-refresh-token"
+        )
 
     mock_find.assert_awaited_once()
     mock_revoke.assert_awaited_once_with(mock_db, 10)
@@ -104,12 +106,12 @@ async def test_get_current_user_rejects_blacklisted_jti(svc: AuthService):
         {
             "sub": "1",
             "jti": jti,
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
         },
         SECRET_KEY,
         algorithm=ALGORITHM,
     )
-    await svc._add_to_blacklist(jti, datetime.now(timezone.utc).timestamp() + 3600)
+    await svc._add_to_blacklist(jti, datetime.now(UTC).timestamp() + 3600)
 
     with pytest.raises(UnauthorizedException) as exc_info:
         await svc.get_current_user(mock_db, token)

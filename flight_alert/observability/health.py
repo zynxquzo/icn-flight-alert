@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 
@@ -52,9 +52,12 @@ async def check_scheduler(is_leader: bool) -> dict:
         if cleanup_persisted:
             info["cleanup_last_run_at"] = cleanup_persisted["last_run_at"]
             info["cleanup_last_run_status"] = cleanup_persisted["last_run_status"]
-    if settings.enable_scheduler and not info["running"]:
-        info["status"] = "fail"
-    elif info["last_run_status"] == "error" or info["cleanup_last_run_status"] == "error":
+    if (
+        settings.enable_scheduler
+        and not info["running"]
+        or info["last_run_status"] == "error"
+        or info["cleanup_last_run_status"] == "error"
+    ):
         info["status"] = "fail"
     else:
         info["status"] = "ok"
@@ -77,15 +80,11 @@ async def build_health_payload() -> dict:
         "scheduler": scheduler_check,
     }
 
-    failed = [
-        name
-        for name, c in checks.items()
-        if c.get("status") == "fail"
-    ]
+    failed = [name for name, c in checks.items() if c.get("status") == "fail"]
     overall = "unhealthy" if failed else "healthy"
 
     return {
         "status": overall,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "checks": checks,
     }

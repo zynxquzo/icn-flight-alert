@@ -5,9 +5,10 @@ Revises: 0002_auth_refresh_email
 Create Date: 2026-05-24
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
+
+from alembic import op
 
 revision = "0003_flight_ext"
 down_revision = "0002_auth_refresh_email"
@@ -22,18 +23,23 @@ def _table_exists(bind, table_name: str) -> bool:
 def _column_exists(bind, table_name: str, column_name: str) -> bool:
     if not _table_exists(bind, table_name):
         return False
-    return any(col["name"] == column_name for col in inspect(bind).get_columns(table_name))
+    return any(
+        col["name"] == column_name for col in inspect(bind).get_columns(table_name)
+    )
 
 
 def _index_exists(bind, table_name: str, index_name: str) -> bool:
     if not _table_exists(bind, table_name):
         return False
-    return any(idx["name"] == index_name for idx in inspect(bind).get_indexes(table_name))
+    return any(
+        idx["name"] == index_name for idx in inspect(bind).get_indexes(table_name)
+    )
 
 
 def _unique_constraint_exists(bind, table_name: str, constraint_name: str) -> bool:
     return any(
-        uc["name"] == constraint_name for uc in inspect(bind).get_unique_constraints(table_name)
+        uc["name"] == constraint_name
+        for uc in inspect(bind).get_unique_constraints(table_name)
     )
 
 
@@ -55,7 +61,10 @@ def upgrade() -> None:
             ),
             sa.Column("title", sa.String(200), nullable=True),
             sa.Column(
-                "terminal", sa.String(10), nullable=False, server_default=sa.text("'T1'")
+                "terminal",
+                sa.String(10),
+                nullable=False,
+                server_default=sa.text("'T1'"),
             ),
             sa.Column(
                 "created_at",
@@ -108,7 +117,9 @@ def upgrade() -> None:
             "airport_documents",
             sa.Column("content_hash", sa.String(64), nullable=True),
         )
-    if not _index_exists(bind, "airport_documents", "ix_airport_documents_content_hash"):
+    if not _index_exists(
+        bind, "airport_documents", "ix_airport_documents_content_hash"
+    ):
         op.create_index(
             "ix_airport_documents_content_hash",
             "airport_documents",
@@ -121,7 +132,9 @@ def upgrade() -> None:
             sa.Column("share_token", sa.String(64), nullable=True),
         )
     if not _unique_constraint_exists(bind, "flights", "uq_flights_share_token"):
-        op.create_unique_constraint("uq_flights_share_token", "flights", ["share_token"])
+        op.create_unique_constraint(
+            "uq_flights_share_token", "flights", ["share_token"]
+        )
     if not _index_exists(bind, "flights", "ix_flights_share_token"):
         op.create_index("ix_flights_share_token", "flights", ["share_token"])
 

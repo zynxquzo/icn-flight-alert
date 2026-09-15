@@ -45,7 +45,12 @@ def _normalize_terminal(terminal: str) -> str:
 
 
 def _rag_enabled() -> bool:
-    return os.getenv("RAG_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+    return os.getenv("RAG_ENABLED", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
 
 def _rag_agent_enabled() -> bool:
@@ -154,7 +159,7 @@ class ChatbotService:
     def _create_system_prompt(
         self,
         terminal: str,
-        wait_time_hours: float | int | None,
+        wait_time_hours: float | None,
         user_context: str = "",
     ) -> str:
         base_prompt = """당신은 인천국제공항 안내 도우미입니다.
@@ -194,7 +199,7 @@ class ChatbotService:
         self,
         message: str,
         terminal: str,
-        wait_time_hours: float | int | None,
+        wait_time_hours: float | None,
         user_context: str = "",
     ) -> ChatOutcome:
         if not self.client:
@@ -203,7 +208,9 @@ class ChatbotService:
                 mode="legacy",
             )
         try:
-            system_prompt = self._create_system_prompt(terminal, wait_time_hours, user_context)
+            system_prompt = self._create_system_prompt(
+                terminal, wait_time_hours, user_context
+            )
             response = await asyncio.to_thread(
                 self.client.chat.completions.create,
                 model="gpt-4o-mini",
@@ -229,13 +236,15 @@ class ChatbotService:
         db: AsyncSession,
         message: str,
         terminal: str,
-        wait_time_hours: float | int | None,
+        wait_time_hours: float | None,
         user_context: str = "",
     ) -> ChatOutcome:
         assert self.async_client is not None
         try:
             if await vector_repository.count_documents(db) == 0:
-                return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
+                return await self._chat_legacy(
+                    message, terminal, wait_time_hours, user_context
+                )
 
             query_emb = await generate_embedding(message)
             term = _normalize_terminal(terminal)
@@ -311,14 +320,16 @@ class ChatbotService:
             return ChatOutcome(response=answer, mode="rag", sources=sources)
         except Exception as e:
             logger.error("RAG 응답 실패, 레거시로 폴백: %s", e, exc_info=True)
-            return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
+            return await self._chat_legacy(
+                message, terminal, wait_time_hours, user_context
+            )
 
     async def _chat_rag_agent(
         self,
         db: AsyncSession,
         message: str,
         terminal: str,
-        wait_time_hours: float | int | None,
+        wait_time_hours: float | None,
         user_context: str = "",
     ) -> ChatOutcome:
         assert self.async_client is not None
@@ -334,17 +345,21 @@ class ChatbotService:
             )
             logger.info("챗봇(RAG agent) 완료 tools=%s sources=%s", trace, len(sources))
             if not (text or "").strip():
-                return await self._chat_rag(db, message, terminal, wait_time_hours, user_context)
+                return await self._chat_rag(
+                    db, message, terminal, wait_time_hours, user_context
+                )
             return ChatOutcome(response=text, mode="agent", sources=sources)
         except Exception as e:
             logger.error("RAG agent 실패, 단순 RAG로 폴백: %s", e, exc_info=True)
-            return await self._chat_rag(db, message, terminal, wait_time_hours, user_context)
+            return await self._chat_rag(
+                db, message, terminal, wait_time_hours, user_context
+            )
 
     async def chat(
         self,
         message: str,
         terminal: str = "T1",
-        wait_time_hours: float | int | None = None,
+        wait_time_hours: float | None = None,
         user_id: int | None = None,
     ) -> ChatOutcome:
         if not self.async_client or not self.client:
@@ -363,11 +378,15 @@ class ChatbotService:
                     logger.warning("사용자 컨텍스트 빌드 실패: %s", e)
 
             if not _rag_enabled():
-                return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
+                return await self._chat_legacy(
+                    message, terminal, wait_time_hours, user_context
+                )
 
             has_docs = await vector_repository.count_documents(db) > 0
             if not has_docs:
-                return await self._chat_legacy(message, terminal, wait_time_hours, user_context)
+                return await self._chat_legacy(
+                    message, terminal, wait_time_hours, user_context
+                )
 
             # 복잡도 기반 라우팅
             if _rag_agent_enabled() and _is_complex_query(message):
@@ -375,7 +394,9 @@ class ChatbotService:
                     db, message, terminal, wait_time_hours, user_context
                 )
 
-            return await self._chat_rag(db, message, terminal, wait_time_hours, user_context)
+            return await self._chat_rag(
+                db, message, terminal, wait_time_hours, user_context
+            )
 
 
 chatbot_service = ChatbotService()

@@ -81,7 +81,9 @@ def _s(meta: dict[str, Any], key: str) -> str | None:
     return str(v)
 
 
-def _view_from_record(doc_id: str, meta: dict[str, Any], document: str) -> AirportDocView:
+def _view_from_record(
+    doc_id: str, meta: dict[str, Any], document: str
+) -> AirportDocView:
     feats_raw = meta.get("features_json") or "[]"
     amen_raw = meta.get("amenities_json") or "[]"
     try:
@@ -137,8 +139,12 @@ def _meta_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     ):
         v = payload.get(key)
         md[key] = "" if v is None else str(v)[:8190]
-    md["features_json"] = json.dumps(payload.get("features") or [], ensure_ascii=False)[:8190]
-    md["amenities_json"] = json.dumps(payload.get("amenities") or [], ensure_ascii=False)[:8190]
+    md["features_json"] = json.dumps(payload.get("features") or [], ensure_ascii=False)[
+        :8190
+    ]
+    md["amenities_json"] = json.dumps(
+        payload.get("amenities") or [], ensure_ascii=False
+    )[:8190]
     content = (payload.get("content") or "")[:50000]
     md["content_preview"] = content[:2000]
     return md
@@ -240,7 +246,9 @@ def chroma_search_keyword(
     try:
         r = col.get(where_document={"$contains": q}, include=["metadatas", "documents"])
     except Exception as e:
-        logger.warning("Chroma where_document 검색 실패, 부분 스캔으로 폴백: %s", e, exc_info=True)
+        logger.warning(
+            "Chroma where_document 검색 실패, 부분 스캔으로 폴백: %s", e, exc_info=True
+        )
         cap = min(8000, max(1, col.count()))
         r = col.get(include=["metadatas", "documents"], limit=cap)
     ids = r.get("ids") or []

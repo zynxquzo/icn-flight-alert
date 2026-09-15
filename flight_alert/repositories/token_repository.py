@@ -1,7 +1,7 @@
 # flight_alert/repositories/token_repository.py
 """리프레시 토큰·보안(인증·재설정) 토큰 저장소."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,9 @@ class TokenRepository:
         token_hash: str,
         expires_at: datetime,
     ) -> RefreshToken:
-        row = RefreshToken(user_id=user_id, token_hash=token_hash, expires_at=expires_at)
+        row = RefreshToken(
+            user_id=user_id, token_hash=token_hash, expires_at=expires_at
+        )
         db.add(row)
         await db.flush()
         await db.refresh(row)
@@ -28,7 +30,7 @@ class TokenRepository:
     async def find_valid_refresh_by_hash(
         self, db: AsyncSession, token_hash: str
     ) -> RefreshToken | None:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         stmt = (
             select(RefreshToken)
             .where(RefreshToken.token_hash == token_hash)
@@ -41,7 +43,7 @@ class TokenRepository:
         await db.execute(
             update(RefreshToken)
             .where(RefreshToken.id == token_id)
-            .values(revoked_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            .values(revoked_at=datetime.now(UTC).replace(tzinfo=None))
         )
 
     async def revoke_all_refresh_for_user(self, db: AsyncSession, user_id: int) -> None:
@@ -49,7 +51,7 @@ class TokenRepository:
             update(RefreshToken)
             .where(RefreshToken.user_id == user_id)
             .where(RefreshToken.revoked_at.is_(None))
-            .values(revoked_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            .values(revoked_at=datetime.now(UTC).replace(tzinfo=None))
         )
 
     async def add_security_token(
@@ -85,7 +87,7 @@ class TokenRepository:
     async def find_valid_security_by_hash(
         self, db: AsyncSession, token_hash: str
     ) -> UserSecurityToken | None:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         stmt = (
             select(UserSecurityToken)
             .where(UserSecurityToken.token_hash == token_hash)
@@ -98,7 +100,7 @@ class TokenRepository:
         await db.execute(
             update(UserSecurityToken)
             .where(UserSecurityToken.id == token_id)
-            .values(used_at=datetime.now(timezone.utc).replace(tzinfo=None))
+            .values(used_at=datetime.now(UTC).replace(tzinfo=None))
         )
 
 

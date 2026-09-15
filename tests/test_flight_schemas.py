@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
-
-import pytest
+from datetime import UTC, date, datetime
 
 from flight_alert.models.flight import Flight
 from flight_alert.schemas.flight import SharedFlightResponse
@@ -24,7 +22,7 @@ def _make_flight(**overrides) -> Flight:
         estimated_date_time="202605221030",
         remark="출발",
         is_active=True,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
         share_token="abc123",
     )
     defaults.update(overrides)

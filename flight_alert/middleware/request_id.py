@@ -13,6 +13,7 @@ from starlette.responses import Response
 
 try:
     import sentry_sdk as _sentry_sdk
+
     _SENTRY_AVAILABLE = True
 except ImportError:
     _SENTRY_AVAILABLE = False

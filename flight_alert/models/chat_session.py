@@ -24,7 +24,9 @@ class ChatSession(Base):
         index=True,
     )
     title: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    terminal: Mapped[str] = mapped_column(String(10), nullable=False, server_default="T1")
+    terminal: Mapped[str] = mapped_column(
+        String(10), nullable=False, server_default="T1"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -54,7 +56,9 @@ class ChatMessage(Base):
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # user | assistant
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    mode: Mapped[str | None] = mapped_column(String(20), nullable=True)  # legacy|rag|agent
+    mode: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # legacy|rag|agent
     sources: Mapped[list | None] = mapped_column(JSON, nullable=True)
     feedback: Mapped[str | None] = mapped_column(
         String(20), nullable=True

@@ -2,25 +2,25 @@
 # 라우트 순서: 고정 경로는 반드시 동적 경로(/flights/{flight_pk})보다 위에 정의
 
 import secrets
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from flight_alert.dependencies import get_current_user
 from flight_alert.models.user import User
-from flight_alert.services.flight_service import flight_service
-from flight_alert.services.flight_status_log_service import flight_status_log_service
 from flight_alert.schemas.flight import (
     FlightCreate,
-    FlightResponse,
     FlightListResponse,
+    FlightResponse,
     FlightUpdateStatus,
     SharedFlightResponse,
 )
 from flight_alert.schemas.flight_status_log import FlightStatusLogResponse
+from flight_alert.services.flight_service import flight_service
+from flight_alert.services.flight_status_log_service import flight_status_log_service
 
 router = APIRouter(prefix="/flights", tags=["Flights"])
 
@@ -40,11 +40,16 @@ def _ics_escape(text: str) -> str:
 
 def _generate_ics(flight) -> str:
     """비행편 한 건을 ICS(iCalendar) 텍스트로 변환."""
+
     def parse_dt(dt_str: str | None) -> datetime | None:
         if not dt_str:
             return None
         try:
-            return datetime.strptime(dt_str, "%Y%m%d%H%M").replace(tzinfo=KST).astimezone(timezone.utc)
+            return (
+                datetime.strptime(dt_str, "%Y%m%d%H%M")
+                .replace(tzinfo=KST)
+                .astimezone(UTC)
+            )
         except ValueError:
             return None
 
@@ -54,15 +59,18 @@ def _generate_ics(flight) -> str:
             flight.flight_date.year,
             flight.flight_date.month,
             flight.flight_date.day,
-            0, 0,
+            0,
+            0,
             tzinfo=KST,
-        ).astimezone(timezone.utc)
+        ).astimezone(UTC)
     if start_dt is None:
-        start_dt = datetime.now(timezone.utc)
+        start_dt = datetime.now(UTC)
     end_dt = start_dt + timedelta(hours=1)
 
     fmt = "%Y%m%dT%H%M%SZ"
-    flight_type_label = "출발" if (flight.flight_type or "").lower() == "departure" else "도착"
+    flight_type_label = (
+        "출발" if (flight.flight_type or "").lower() == "departure" else "도착"
+    )
     summary = f"{flight.flight_id or '비행편'} - {flight_type_label} 인천공항"
 
     loc_parts = []
@@ -85,7 +93,7 @@ def _generate_ics(flight) -> str:
     ]
     description = "\\n".join(_ics_escape(line) for line in desc_lines)
     uid = f"icn-flight-{flight.flight_pk}@icn-flight-alert"
-    now_str = datetime.now(timezone.utc).strftime(fmt)
+    now_str = datetime.now(UTC).strftime(fmt)
 
     return (
         "BEGIN:VCALENDAR\r\n"
@@ -183,7 +191,9 @@ async def update_flight_status(
             detail="본인의 비행편만 수정할 수 있습니다.",
         )
 
-    return await flight_service.update_flight_status(db, flight_pk, status_data.is_active)
+    return await flight_service.update_flight_status(
+        db, flight_pk, status_data.is_active
+    )
 
 
 @router.post("/{flight_pk}/refresh")
@@ -298,6 +308,7 @@ async def read_shared_flight(
 ):
     """공유 링크로 비행편 읽기 전용 조회 (인증 불필요). 소유자 개인정보는 제외."""
     from sqlalchemy import select
+
     from flight_alert.models.flight import Flight as FlightModel
 
     flight = await db.scalar(

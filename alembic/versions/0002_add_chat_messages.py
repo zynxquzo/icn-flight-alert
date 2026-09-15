@@ -9,8 +9,6 @@ If your DB was stamped or migrated with this id elsewhere, keep this file so
 `alembic upgrade head` can resolve the revision graph.
 """
 
-from alembic import op
-
 revision = "0002_add_chat_messages"
 down_revision = "0001_baseline"
 branch_labels = None

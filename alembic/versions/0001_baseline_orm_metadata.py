@@ -9,9 +9,9 @@ Revises:
 Create Date: 2026-04-27
 """
 
+import flight_alert.models  # noqa: F401
 from alembic import op
 from database import Base
-import flight_alert.models  # noqa: F401
 
 revision = "0001_baseline"
 down_revision = None

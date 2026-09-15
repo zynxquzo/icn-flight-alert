@@ -10,7 +10,7 @@ import logging
 import os
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
@@ -46,7 +46,7 @@ def _exp_to_unix_ts(exp: object) -> float:
     if isinstance(exp, datetime):
         dt = exp
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt.timestamp()
     return 0.0
 
@@ -75,7 +75,7 @@ class AuthService:
         await token_blacklist.revoke(jti, exp_unix)
 
     def _create_access_token(self, user_id: int) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=EXPIRE_MINUTES)
         jti = str(uuid.uuid4())
         payload = {
             "sub": str(user_id),
@@ -86,7 +86,9 @@ class AuthService:
 
     async def _issue_refresh(self, db: AsyncSession, user_id: int) -> str:
         raw = _new_opaque_token()
-        exp = (datetime.now(timezone.utc) + timedelta(days=REFRESH_EXPIRE_DAYS)).replace(tzinfo=None)
+        exp = (datetime.now(UTC) + timedelta(days=REFRESH_EXPIRE_DAYS)).replace(
+            tzinfo=None
+        )
         await token_repository.add_refresh_token(
             db,
             user_id=user_id,
@@ -100,7 +102,9 @@ class AuthService:
             db, user.user_id, SecurityTokenKind.email_verify.value
         )
         raw = _new_opaque_token()
-        exp = (datetime.now(timezone.utc) + timedelta(hours=EMAIL_VERIFY_HOURS)).replace(tzinfo=None)
+        exp = (datetime.now(UTC) + timedelta(hours=EMAIL_VERIFY_HOURS)).replace(
+            tzinfo=None
+        )
         await token_repository.add_security_token(
             db,
             user_id=user.user_id,
@@ -133,7 +137,9 @@ class AuthService:
             )
 
         hashed_password = self._hash_password(data.password)
-        new_user = User(email=data.email, password=hashed_password, email_verified=False)
+        new_user = User(
+            email=data.email, password=hashed_password, email_verified=False
+        )
         await user_repository.save(db, new_user)
         await db.commit()
         await db.refresh(new_user)
@@ -171,11 +177,15 @@ class AuthService:
         logger.info("로그인 성공: %s", user.email)
         return access_token, refresh_token
 
-    async def refresh_tokens(self, db: AsyncSession, refresh_plain: str) -> tuple[str, str]:
+    async def refresh_tokens(
+        self, db: AsyncSession, refresh_plain: str
+    ) -> tuple[str, str]:
         th = _hash_opaque_token(refresh_plain.strip())
         row = await token_repository.find_valid_refresh_by_hash(db, th)
         if not row:
-            raise UnauthorizedException("REFRESH_INVALID", "리프레시 토큰이 유효하지 않습니다.")
+            raise UnauthorizedException(
+                "REFRESH_INVALID", "리프레시 토큰이 유효하지 않습니다."
+            )
 
         await token_repository.revoke_refresh(db, row.id)
         access = self._create_access_token(row.user_id)
@@ -226,7 +236,7 @@ class AuthService:
             jti = payload.get("jti")
             if isinstance(jti, str) and jti:
                 exp_unix = _exp_to_unix_ts(payload.get("exp"))
-                if exp_unix > datetime.now(timezone.utc).timestamp():
+                if exp_unix > datetime.now(UTC).timestamp():
                     await self._add_to_blacklist(jti, exp_unix)
 
         await token_repository.revoke_all_refresh_for_user(db, user_id)
@@ -249,7 +259,7 @@ class AuthService:
             return
 
         exp_unix = _exp_to_unix_ts(payload.get("exp"))
-        if exp_unix <= datetime.now(timezone.utc).timestamp():
+        if exp_unix <= datetime.now(UTC).timestamp():
             return
 
         await self._add_to_blacklist(jti, exp_unix)
@@ -262,7 +272,9 @@ class AuthService:
             db, user.user_id, SecurityTokenKind.password_reset.value
         )
         raw = _new_opaque_token()
-        exp = (datetime.now(timezone.utc) + timedelta(hours=PASSWORD_RESET_HOURS)).replace(tzinfo=None)
+        exp = (datetime.now(UTC) + timedelta(hours=PASSWORD_RESET_HOURS)).replace(
+            tzinfo=None
+        )
         await token_repository.add_security_token(
             db,
             user_id=user.user_id,
@@ -284,7 +296,9 @@ class AuthService:
             email_service.send_simple_email, user.email, subject, text, html
         )
 
-    async def reset_password(self, db: AsyncSession, token_plain: str, new_password: str) -> None:
+    async def reset_password(
+        self, db: AsyncSession, token_plain: str, new_password: str
+    ) -> None:
         th = _hash_opaque_token(token_plain.strip())
         row = await token_repository.find_valid_security_by_hash(db, th)
         if not row or row.kind != SecurityTokenKind.password_reset.value:

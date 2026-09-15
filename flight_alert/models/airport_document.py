@@ -18,7 +18,9 @@ class AirportDocument(Base):
     __tablename__ = "airport_documents"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    doc_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    doc_id: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     subcategory: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -42,7 +44,9 @@ class AirportDocument(Base):
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # 증분 크롤: title+content의 SHA-256 (64자 hex). 변경 없으면 임베딩 재생성 생략
-    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    content_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

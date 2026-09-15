@@ -8,11 +8,12 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class SuccessResponse(BaseModel, Generic[T]):
     """성공 응답"""
+
     success: bool = True
     data: T
     message: str
@@ -20,12 +21,14 @@ class SuccessResponse(BaseModel, Generic[T]):
 
 class ErrorResponse(BaseModel):
     """에러 응답"""
+
     success: bool = False
     error: dict[str, Any]
 
 
 class PaginationResponse(BaseModel, Generic[T]):
     """페이지네이션 응답"""
+
     items: list[T]
     total: int
     page: int

@@ -5,8 +5,9 @@ Revises: 0002_add_chat_messages
 Create Date: 2026-05-13
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0002_auth_refresh_email"
 down_revision = "0002_add_chat_messages"
@@ -53,7 +54,9 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("token_hash"),
         )
-        op.create_index("ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"], unique=False)
+        op.create_index(
+            "ix_refresh_tokens_user_id", "refresh_tokens", ["user_id"], unique=False
+        )
 
     if not inspector.has_table("user_security_tokens"):
         op.create_table(

@@ -7,7 +7,7 @@ APScheduler를 사용한 주기적 비행편 갱신 (Redis 리더 락으로 단�
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -42,25 +42,27 @@ class FlightScheduler:
     def get_status(self) -> dict:
         last_at = self._last_run_at
         if last_at and last_at.tzinfo is None:
-            last_at = last_at.replace(tzinfo=timezone.utc)
+            last_at = last_at.replace(tzinfo=UTC)
         cleanup_last_at = self._cleanup_last_run_at
         if cleanup_last_at and cleanup_last_at.tzinfo is None:
-            cleanup_last_at = cleanup_last_at.replace(tzinfo=timezone.utc)
+            cleanup_last_at = cleanup_last_at.replace(tzinfo=UTC)
         return {
             "running": self.is_running,
             "interval_minutes": self._interval_minutes,
             "last_run_at": last_at.isoformat() if last_at else None,
             "last_run_status": self._last_run_status,
-            "cleanup_last_run_at": cleanup_last_at.isoformat() if cleanup_last_at else None,
+            "cleanup_last_run_at": (
+                cleanup_last_at.isoformat() if cleanup_last_at else None
+            ),
             "cleanup_last_run_status": self._cleanup_last_run_status,
         }
 
     def _record_run(self, status: str) -> None:
-        self._last_run_at = datetime.now(timezone.utc)
+        self._last_run_at = datetime.now(UTC)
         self._last_run_status = status
 
     def _record_cleanup_run(self, status: str) -> None:
-        self._cleanup_last_run_at = datetime.now(timezone.utc)
+        self._cleanup_last_run_at = datetime.now(UTC)
         self._cleanup_last_run_status = status
 
     async def get_persisted_status(self) -> dict | None:
@@ -100,7 +102,7 @@ class FlightScheduler:
         client = await get_redis()
         if client is None:
             return
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         ttl = max(self._interval_minutes * 60 * 24, 3600)
         await client.set(SCHEDULER_LAST_RUN_KEY, now_iso, ex=ttl)
         await client.set(SCHEDULER_LAST_STATUS_KEY, status, ex=ttl)
@@ -112,7 +114,7 @@ class FlightScheduler:
         client = await get_redis()
         if client is None:
             return
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         ttl = 24 * 3600 * 2
         await client.set(CLEANUP_LAST_RUN_KEY, now_iso, ex=ttl)
         await client.set(CLEANUP_LAST_STATUS_KEY, status, ex=ttl)
@@ -205,7 +207,9 @@ class FlightScheduler:
     async def _cleanup_expired_flights_async(self) -> None:
         """지난 비행편 정리: 1) 활성 비행편 비활성화 2) 보관 기간 지난 비활성 비행편 삭제."""
         try:
-            is_leader = await try_acquire_leader_lock(ttl_seconds=3600, key=CLEANUP_LEADER_KEY)
+            is_leader = await try_acquire_leader_lock(
+                ttl_seconds=3600, key=CLEANUP_LEADER_KEY
+            )
         except Exception:
             logger.exception("비행편 정리: 리더 락 획득 중 에러")
             self._record_cleanup_run("error")

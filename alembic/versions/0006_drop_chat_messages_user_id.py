@@ -5,9 +5,10 @@ Revises: 0005_fix_chat_role_varchar
 Create Date: 2026-05-28
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
+
+from alembic import op
 
 revision = "0006_drop_chat_messages_user_id"
 down_revision = "0005_fix_chat_role_varchar"

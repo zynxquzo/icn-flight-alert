@@ -3,20 +3,20 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from flight_alert.exceptions import NotFoundException, BadRequestException
+from flight_alert.exceptions import BadRequestException, NotFoundException
 from flight_alert.models.flight import Flight
 from flight_alert.repositories.flight_repository import flight_repository
-from flight_alert.services.email_service import email_service
-from flight_alert.services.incheon_api_service import incheon_api_service
 from flight_alert.schemas.flight import (
     FlightCreate,
-    FlightResponse,
     FlightListResponse,
+    FlightResponse,
 )
+from flight_alert.services.email_service import email_service
+from flight_alert.services.incheon_api_service import incheon_api_service
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ async def _add_notification_and_email(
         notification_type=notification_type,
         message=message,
         sent_to=flight.user_email,
-        sent_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        sent_at=datetime.now(UTC).replace(tzinfo=None),
         is_sent=False,
     )
     db.add(notification)
@@ -199,10 +199,14 @@ class FlightService:
         """비행편 상세 조회"""
         flight = await flight_repository.find_by_id(db, flight_pk)
         if not flight:
-            raise NotFoundException(f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})")
+            raise NotFoundException(
+                f"존재하지 않는 비행편입니다. (flight_pk={flight_pk})"
+            )
         return flight
 
-    async def read_flight_detail(self, db: AsyncSession, flight_pk: int) -> FlightResponse:
+    async def read_flight_detail(
+        self, db: AsyncSession, flight_pk: int
+    ) -> FlightResponse:
         """비행편 상세 정보 조회"""
         flight = await self.read_flight_by_id(db, flight_pk)
         return FlightResponse.model_validate(flight)
@@ -214,7 +218,9 @@ class FlightService:
         await flight_repository.delete(db, flight)
         await db.commit()
 
-        logger.info("비행편 삭제 완료: flight_pk=%s, flight_id=%s", flight_pk, flight.flight_id)
+        logger.info(
+            "비행편 삭제 완료: flight_pk=%s, flight_id=%s", flight_pk, flight.flight_id
+        )
 
     async def update_flight_status(
         self, db: AsyncSession, flight_pk: int, is_active: bool
@@ -267,7 +273,7 @@ class FlightService:
             flight.api_sync_status = "failed"
             logger.warning("API 호출 실패 - 기존 데이터 유지: flight_pk=%s", flight_pk)
 
-        flight.last_checked_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        flight.last_checked_at = datetime.now(UTC).replace(tzinfo=None)
 
         changes = []
 

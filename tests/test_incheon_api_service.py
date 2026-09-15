@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 import re
+from datetime import date
 
 import httpx
 import pytest
@@ -66,9 +65,9 @@ async def test_get_flight_info_matches_id_and_date():
         "gatenumber": "114",
         "airline": "대한항공",
     }
-    route = respx.get(
-        url=re.compile(r".*getPassengerDeparturesDSOdp")
-    ).mock(return_value=httpx.Response(200, json=_sample_api_response([item])))
+    route = respx.get(url=re.compile(r".*getPassengerDeparturesDSOdp")).mock(
+        return_value=httpx.Response(200, json=_sample_api_response([item]))
+    )
 
     result = await IncheonAPIService.get_flight_info(
         flight_id="ke123",

@@ -64,5 +64,3 @@ async def crawl_airport_shopping() -> tuple[str, str]:
     """쇼핑 목록 페이지 (일반/면세 등)."""
     html = await _fetch(SHOPPING_URL)
     return html, SHOPPING_URL
-
-

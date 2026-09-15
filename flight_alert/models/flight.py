@@ -19,43 +19,46 @@ if TYPE_CHECKING:
 
 class Flight(Base):
     """비행편 테이블"""
+
     __tablename__ = "flights"
 
     # Primary Key
     flight_pk: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    
+
     # User Information
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id"), nullable=False, index=True
+    )
     user_email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    
+
     # Flight Basic Information
     flight_id: Mapped[str | None] = mapped_column(String(10), nullable=True)
     flight_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     flight_type: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    
+
     # Airline & Airport Information
     airline: Mapped[str | None] = mapped_column(String(50), nullable=True)
     airport: Mapped[str | None] = mapped_column(String(50), nullable=True)
     airport_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    
+
     # Terminal & Gate Information
     terminal_id: Mapped[str | None] = mapped_column(String(10), nullable=True)
     gate_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    
+
     # Schedule Information
     schedule_date_time: Mapped[str | None] = mapped_column(String(12), nullable=True)
     estimated_date_time: Mapped[str | None] = mapped_column(String(12), nullable=True)
-    
+
     # Status Information
     remark: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    
+
     # Departure Only Fields
     chkin_range: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    
+
     # Arrival Only Fields
     carousel: Mapped[str | None] = mapped_column(String(10), nullable=True)
     exit_number: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    
+
     # System Fields
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -71,12 +74,10 @@ class Flight(Base):
 
     # Relationships
     status_logs: Mapped[list["FlightStatusLog"]] = relationship(
-        back_populates="flight", 
-        cascade="all, delete-orphan"
+        back_populates="flight", cascade="all, delete-orphan"
     )
     notifications: Mapped[list["Notification"]] = relationship(
-        back_populates="flight", 
-        cascade="all, delete-orphan"
+        back_populates="flight", cascade="all, delete-orphan"
     )
 
     def __repr__(self):

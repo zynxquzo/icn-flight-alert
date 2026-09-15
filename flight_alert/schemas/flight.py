@@ -4,7 +4,7 @@ Flight Schemas
 비행편 관련 요청/응답 스키마
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 class FlightType(str, Enum):
     """비행편 타입"""
+
     departure = "departure"
     arrival = "arrival"
 
@@ -20,21 +21,25 @@ def _as_utc(dt: datetime | None) -> datetime | None:
     """DB에는 tzinfo 없는 UTC 시각으로 저장되므로, 응답 직렬화 시
     tzinfo를 명시해 클라이언트가 로컬 시간으로 오인하지 않게 한다."""
     if dt is not None and dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt
 
 
 class FlightCreate(BaseModel):
     """비행편 등록 요청"""
-    flight_id: str = Field(..., min_length=2, max_length=10, description="항공편명 (예: KE123)")
+
+    flight_id: str = Field(
+        ..., min_length=2, max_length=10, description="항공편명 (예: KE123)"
+    )
     flight_date: date = Field(..., description="출발/도착 날짜 (YYYY-MM-DD)")
     flight_type: FlightType = Field(..., description="'departure' or 'arrival'")
 
 
 class FlightResponse(BaseModel):
     """비행편 상세 응답"""
+
     flight_pk: int
-    user_id: int 
+    user_id: int
     user_email: str
     flight_id: str | None
     flight_date: date | None
@@ -80,6 +85,7 @@ class FlightResponse(BaseModel):
 
 class SharedFlightResponse(BaseModel):
     """읽기 전용 공유 링크 응답 (소유자 개인정보 제외)"""
+
     flight_pk: int
     flight_id: str | None
     flight_date: date | None
@@ -105,6 +111,7 @@ class SharedFlightResponse(BaseModel):
 
 class FlightListResponse(BaseModel):
     """비행편 목록 응답 (간소화된 정보)"""
+
     flight_pk: int
     flight_id: str | None
     flight_date: date | None
@@ -122,4 +129,5 @@ class FlightListResponse(BaseModel):
 
 class FlightUpdateStatus(BaseModel):
     """비행편 활성화 상태 변경 요청"""
+
     is_active: bool = Field(..., description="활성화 여부")
