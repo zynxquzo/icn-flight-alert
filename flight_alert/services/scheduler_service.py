@@ -103,7 +103,9 @@ class FlightScheduler:
         if client is None:
             return
         now_iso = datetime.now(UTC).isoformat()
-        ttl = max(self._interval_minutes * 60 * 24, 3600)
+        # 정리 job과 동일하게 "자체 주기의 2배" 정도만 유지 — 너무 길면
+        # 스케줄러가 멈춰도 헬스체크가 한동안 정상으로 오인함
+        ttl = max(self._interval_minutes * 60 * 2, 3600)
         await client.set(SCHEDULER_LAST_RUN_KEY, now_iso, ex=ttl)
         await client.set(SCHEDULER_LAST_STATUS_KEY, status, ex=ttl)
 
