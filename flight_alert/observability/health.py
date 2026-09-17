@@ -52,9 +52,8 @@ async def check_scheduler(is_leader: bool) -> dict:
         if cleanup_persisted:
             info["cleanup_last_run_at"] = cleanup_persisted["last_run_at"]
             info["cleanup_last_run_status"] = cleanup_persisted["last_run_status"]
-    if (
-        settings.enable_scheduler
-        and not info["running"]
+    if settings.enable_scheduler and (
+        not info["running"]
         or info["last_run_status"] == "error"
         or info["cleanup_last_run_status"] == "error"
     ):
