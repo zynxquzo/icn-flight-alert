@@ -177,6 +177,8 @@ Authorization: Bearer {access_token}
       "interval_minutes": 10,
       "last_run_at": "2026-05-22T11:50:00+00:00",
       "last_run_status": "ok",
+      "cleanup_last_run_at": "2026-05-22T03:00:00+00:00",
+      "cleanup_last_run_status": "ok",
       "leader_lock": true,
       "is_leader": true
     }
@@ -190,7 +192,7 @@ Authorization: Bearer {access_token}
 | `skipped` | Redis 미설정 등으로 검사 생략 |
 | `fail` | 연결·실행 실패 (`status`가 `unhealthy`로 올라갈 수 있음) |
 
-`scheduler.last_run_status`: `ok` \| `error` \| `skipped` (리더가 아닌 인스턴스에서 job 스킵 시 `skipped`).
+`scheduler.last_run_status` / `scheduler.cleanup_last_run_status`: `ok` \| `error` \| `skipped` (리더가 아닌 인스턴스에서 job 스킵 시 `skipped`).
 
 ---
 
