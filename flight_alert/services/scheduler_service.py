@@ -199,8 +199,12 @@ class FlightScheduler:
                     error_count,
                     changes_count,
                 )
-            self._record_run("ok")
-            await self._persist_run_metadata("ok")
+            # 개별 비행편 갱신 실패는 위 for문에서 삼켜지므로, 전부 실패해도
+            # 여기서 "ok"로 덮어쓰면 헬스체크가 장애를 영영 감지하지 못한다.
+            all_failed = bool(active_flights) and error_count == len(active_flights)
+            run_status = "error" if all_failed else "ok"
+            self._record_run(run_status)
+            await self._persist_run_metadata(run_status)
         except Exception as e:
             logger.exception("스케줄러 실행 중 에러: %s", e)
             self._record_run("error")
