@@ -38,6 +38,35 @@ def _ics_escape(text: str) -> str:
     )
 
 
+def _fold_ics_line(line: str) -> str:
+    """RFC 5545 라인 폴딩: 콘텐츠 라인을 75옥텟 단위로 접어 CRLF+공백으로 이어붙임.
+
+    remark 등 긴 텍스트가 포함되면 폴딩 없이는 일부 캘린더 클라이언트가
+    거부하거나 내용을 잘라내는 유효하지 않은 .ics가 생성된다.
+    """
+    data = line.encode("utf-8")
+    if len(data) <= 75:
+        return line
+
+    chunks = []
+    limit = 75
+    while data:
+        piece = data[:limit]
+        # 멀티바이트 UTF-8 시퀀스 중간을 자르지 않도록 뒤로 물러남
+        while piece:
+            try:
+                text = piece.decode("utf-8")
+                break
+            except UnicodeDecodeError:
+                piece = piece[:-1]
+        else:
+            text = ""
+        chunks.append(text)
+        data = data[len(piece):]
+        limit = 74  # 이어지는 줄은 선행 공백 1옥텟을 포함해 75옥텟 유지
+    return "\r\n ".join(chunks)
+
+
 def _generate_ics(flight) -> str:
     """비행편 한 건을 ICS(iCalendar) 텍스트로 변환."""
 
@@ -106,9 +135,9 @@ def _generate_ics(flight) -> str:
         f"DTSTAMP:{now_str}\r\n"
         f"DTSTART:{start_dt.strftime(fmt)}\r\n"
         f"DTEND:{end_dt.strftime(fmt)}\r\n"
-        f"SUMMARY:{_ics_escape(summary)}\r\n"
-        f"DESCRIPTION:{description}\r\n"
-        f"LOCATION:{_ics_escape(location)}\r\n"
+        f"{_fold_ics_line(f'SUMMARY:{_ics_escape(summary)}')}\r\n"
+        f"{_fold_ics_line(f'DESCRIPTION:{description}')}\r\n"
+        f"{_fold_ics_line(f'LOCATION:{_ics_escape(location)}')}\r\n"
         "END:VEVENT\r\n"
         "END:VCALENDAR\r\n"
     )
