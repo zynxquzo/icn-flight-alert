@@ -67,9 +67,7 @@ async def build_health_payload() -> dict:
     db_check = await check_database()
     redis_check = await check_redis()
 
-    leader = False
-    if get_settings().redis_enabled and get_settings().scheduler_leader_lock:
-        leader = await is_current_leader()
+    leader = await is_current_leader()
     scheduler_check = await check_scheduler(leader)
     scheduler_check["is_leader"] = leader
 
