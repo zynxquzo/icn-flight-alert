@@ -51,7 +51,7 @@ async def try_acquire_leader_lock(ttl_seconds: int, key: str = LEADER_KEY) -> bo
 async def is_current_leader() -> bool:
     """현재 프로세스가 리더인지 (헬스·디버깅용)."""
     settings = get_settings()
-    if not settings.redis_enabled:
+    if not settings.redis_enabled or not settings.scheduler_leader_lock:
         return settings.enable_scheduler
     client = await get_redis()
     if client is None:
