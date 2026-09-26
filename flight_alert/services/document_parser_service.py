@@ -73,9 +73,9 @@ def _infer_zone(location: str | None) -> str | None:
 def _infer_floor(location: str | None) -> str | None:
     if not location:
         return None
-    m = re.search(r"지하\s*1\s*층|지하1층|B1", location)
+    m = re.search(r"지하\s*(\d+)\s*층|B(\d+)(?!\d)", location)
     if m:
-        return "지하1층"
+        return f"지하{m.group(1) or m.group(2)}층"
     m = re.search(r"(\d+)\s*층", location)
     if m:
         return f"{m.group(1)}층"
