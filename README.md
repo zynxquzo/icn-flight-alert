@@ -335,11 +335,21 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 | `PATCH` | `/flights/{flight_pk}/status` | ✅ | `is_active` 변경, 본인 **403** |
 | `POST` | `/flights/{flight_pk}/refresh` | ✅ | 수동 갱신, 본인 **403** |
 | `GET` | `/flights/{flight_pk}/logs` | ✅ | 변경 이력, `change_type` 선택 필터, 본인만 |
+| `GET` | `/flights/{flight_pk}/calendar.ics` | ✅ | 비행편 일정을 iCalendar(.ics) 파일로 다운로드, 본인만 |
+| `POST` | `/flights/{flight_pk}/share` | ✅ | 읽기 전용 공유 링크 토큰 생성(이미 있으면 재사용), 본인만 |
+| `DELETE` | `/flights/{flight_pk}/share` | ✅ | 공유 링크 취소, 본인만 |
+| `GET` | `/flights/shared/{share_token}` |  | 공유 링크로 읽기 전용 조회(인증 불필요), 소유자 개인정보 제외 |
 | `GET` | `/notifications` | ✅ | 저장된 알림 이력 수동 조회, `notification_type` 선택 필터 |
 | `GET` | `/notifications/flights/{flight_pk}` | ✅ | 해당 비행편 알림 이력 수동 조회, 본인만 |
 | `POST` | `/notifications/flights/{flight_pk}/check` | ✅ | 알림 수동 감지(인천 API·변경 시 알림·메일), 본인만, 응답은 refresh와 동일 |
 | `GET` | `/chatbot` | ✅ | 소개·환경 변수 안내 |
-| `POST` | `/chatbot/chat` | ✅ | 챗봇; 응답 `mode`, `sources` 포함 |
+| `POST` | `/chatbot/chat` | ✅ | 단발성 챗봇(세션 없이, 하위 호환); 응답 `mode`, `sources` 포함 |
+| `POST` | `/chatbot/sessions` | ✅ | 채팅 세션 생성 |
+| `GET` | `/chatbot/sessions` | ✅ | 내 채팅 세션 목록(최근 20개) |
+| `GET` | `/chatbot/sessions/{session_id}` | ✅ | 특정 세션의 전체 메시지 조회 |
+| `DELETE` | `/chatbot/sessions/{session_id}` | ✅ | 채팅 세션 및 모든 메시지 삭제 |
+| `POST` | `/chatbot/sessions/{session_id}/messages` | ✅ | 세션에 메시지 전송·AI 응답 영속화(RAG 컨텍스트 자동 주입) |
+| `POST` | `/chatbot/sessions/{session_id}/messages/{message_id}/feedback` | ✅ | AI 응답에 helpful/not_helpful 피드백 제출 |
 
 프론트엔드·모바일 클라이언트는 보호된 경로에 `Authorization: Bearer <access_token>` 헤더를 포함해야 합니다. 액세스 만료 시 **`POST /auth/refresh`**로 갱신한 뒤 재시도하는 방식을 권장합니다(별도 저장소 프론트엔드 README 참고).
 
