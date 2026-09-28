@@ -62,7 +62,7 @@ def _fold_ics_line(line: str) -> str:
         else:
             text = ""
         chunks.append(text)
-        data = data[len(piece):]
+        data = data[len(piece) :]
         limit = 74  # 이어지는 줄은 선행 공백 1옥텟을 포함해 75옥텟 유지
     return "\r\n ".join(chunks)
 
