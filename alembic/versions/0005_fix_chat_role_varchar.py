@@ -31,7 +31,10 @@ def downgrade() -> None:
     bind = op.get_bind()
     bind.execute(
         text(
-            "CREATE TYPE IF NOT EXISTS chat_message_role AS ENUM ('user', 'assistant')"
+            "DO $$ BEGIN "
+            "CREATE TYPE chat_message_role AS ENUM ('user', 'assistant'); "
+            "EXCEPTION WHEN duplicate_object THEN NULL; "
+            "END $$"
         )
     )
     op.execute(
