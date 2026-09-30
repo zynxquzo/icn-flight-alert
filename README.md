@@ -103,7 +103,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 **Alembic과 `DATABASE_URL`**: Alembic은 동기 드라이버(psycopg2)로 마이그레이션을 실행합니다. `DATABASE_URL`이 `postgresql+asyncpg://` 이어도 `alembic/env.py`에서 **`postgresql+psycopg2://`** 로 바꿔 연결합니다.
 
-**리비전 체인 (요약)**  
+**리비전 체인 (요약)**
 `0001_baseline` 이후 **`0002_add_chat_messages`**(no-op 스텁: 일부 DB에만 기록된 리비전 ID와 맞추기 위함) → **`0002_auth_refresh_email`**(`email_verified`, `refresh_tokens`, `user_security_tokens` 등) → **`0003_flight_ext`**(채팅 세션, flights 확장, pg_trgm) → **`0004_chat_fix`** → **`0005_fix_chat_role_varchar`** → **`0006_drop_chat_messages_user_id`**.
 
 `0003`~`0006`은 처음부터 존재 여부(`has_table`/`get_columns`)를 확인하고 적용하도록 작성되어 있어 완전히 새 DB에서도, 이미 일부 적용된 기존 DB에서도 안전하다. `0002_auth_refresh_email`도 같은 이유로 존재 여부 체크가 추가되어 있다 — 자세한 배경은 [Troubleshooting #11](#-troubleshooting) 참고.
@@ -345,7 +345,7 @@ RAG용 `AirportDocument` 테이블은 비행편 도메인과 독립적으로 운
 
 ### 프론트엔드 연동 (CORS)
 
-`main.py`의 `CORSMiddleware`에서 **`http://localhost:5173`**, **`http://127.0.0.1:5173`** 을 허용합니다. 
+`main.py`의 `CORSMiddleware`에서 **`http://localhost:5173`**, **`http://127.0.0.1:5173`** 을 허용합니다.
 
 별도 저장소(예: Vite + React 기반 `icn-flight-alert-frontend`)를 로컬에서 띄울 때 동일 설정을 유지하세요.
 
