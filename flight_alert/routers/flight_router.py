@@ -6,10 +6,12 @@ from datetime import UTC, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from flight_alert.dependencies import get_current_user
+from flight_alert.models.flight import Flight as FlightModel
 from flight_alert.models.user import User
 from flight_alert.schemas.flight import (
     FlightCreate,
@@ -336,10 +338,6 @@ async def read_shared_flight(
     db: AsyncSession = Depends(get_db),
 ):
     """공유 링크로 비행편 읽기 전용 조회 (인증 불필요). 소유자 개인정보는 제외."""
-    from sqlalchemy import select
-
-    from flight_alert.models.flight import Flight as FlightModel
-
     flight = await db.scalar(
         select(FlightModel).where(FlightModel.share_token == share_token)
     )
