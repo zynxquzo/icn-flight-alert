@@ -1,10 +1,12 @@
 # flight_alert/routers/chatbot_router.py
 """챗봇 관련 API 엔드포인트."""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
@@ -22,6 +24,10 @@ from flight_alert.schemas.chat import (
 from flight_alert.services.chatbot_service import chatbot_service
 
 router = APIRouter(prefix="/chatbot", tags=["Chatbot"])
+
+logger = logging.getLogger(__name__)
+
+_DB_ERROR_DETAIL = "일시적인 오류로 요청을 처리할 수 없습니다. 잠시 후 다시 시도해주세요."
 
 
 # ---------------------------------------------------------------------------
@@ -87,11 +93,18 @@ async def create_session(
     db: AsyncSession = Depends(get_db),
 ):
     """새 채팅 세션 생성."""
-    session = await chat_repository.create_session(
-        db, user_id=current_user.user_id, terminal=payload.terminal
-    )
-    await db.commit()
-    await db.refresh(session)
+    try:
+        session = await chat_repository.create_session(
+            db, user_id=current_user.user_id, terminal=payload.terminal
+        )
+        await db.commit()
+        await db.refresh(session)
+    except SQLAlchemyError:
+        await db.rollback()
+        logger.error("채팅 세션 생성 실패", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_DB_ERROR_DETAIL
+        )
     return ChatSessionOut.model_validate(session)
 
 
@@ -127,12 +140,19 @@ async def delete_session(
     db: AsyncSession = Depends(get_db),
 ):
     """채팅 세션 및 모든 메시지 삭제."""
-    deleted = await chat_repository.delete_session(db, session_id, current_user.user_id)
-    if not deleted:
+    try:
+        deleted = await chat_repository.delete_session(db, session_id, current_user.user_id)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다."
+            )
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        logger.error("채팅 세션 삭제 실패", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="세션을 찾을 수 없습니다."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_DB_ERROR_DETAIL
         )
-    await db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -163,18 +183,25 @@ async def send_session_message(
         user_id=current_user.user_id,
     )
 
-    await chat_repository.add_message(db, session_id, "user", request.message)
-    await chat_repository.add_message(
-        db,
-        session_id,
-        "assistant",
-        outcome.response,
-        mode=outcome.mode,
-        sources=outcome.sources,
-    )
-    if not session.title:
-        await chat_repository.update_session_title(db, session_id, request.message[:80])
-    await db.commit()
+    try:
+        await chat_repository.add_message(db, session_id, "user", request.message)
+        await chat_repository.add_message(
+            db,
+            session_id,
+            "assistant",
+            outcome.response,
+            mode=outcome.mode,
+            sources=outcome.sources,
+        )
+        if not session.title:
+            await chat_repository.update_session_title(db, session_id, request.message[:80])
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        logger.error("채팅 메시지 저장 실패 (session_id=%s)", session_id, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_DB_ERROR_DETAIL
+        )
 
     return ChatResponse(
         message=request.message,
@@ -199,19 +226,26 @@ async def submit_feedback(
     db: AsyncSession = Depends(get_db),
 ):
     """AI 응답에 helpful / not_helpful 피드백 제출."""
-    msg = await chat_repository.set_feedback(
-        db,
-        message_id=message_id,
-        session_id=session_id,
-        user_id=current_user.user_id,
-        feedback=payload.feedback,
-    )
-    if not msg:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="메시지를 찾을 수 없거나 본인 세션의 AI 응답이 아닙니다.",
+    try:
+        msg = await chat_repository.set_feedback(
+            db,
+            message_id=message_id,
+            session_id=session_id,
+            user_id=current_user.user_id,
+            feedback=payload.feedback,
         )
-    await db.commit()
+        if not msg:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="메시지를 찾을 수 없거나 본인 세션의 AI 응답이 아닙니다.",
+            )
+        await db.commit()
+    except SQLAlchemyError:
+        await db.rollback()
+        logger.error("피드백 저장 실패 (message_id=%s)", message_id, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=_DB_ERROR_DETAIL
+        )
     return FeedbackOut(message_id=msg.message_id, feedback=msg.feedback)
 
 
