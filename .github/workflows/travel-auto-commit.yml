@@ -140,6 +140,117 @@ jobs:
           PY
           fi
 
+      - name: 그래도 변경이 없으면 OpenAI로 사소한 개선 후보를 찾아 적용
+        if: steps.date_check.outputs.in_range == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -e
+          if git diff --quiet; then
+            echo "기계적인 폴백으로도 변경이 없어, OpenAI에게 주석/오탈자 수준의 사소한 개선을 물어봅니다."
+            python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import random
+          import urllib.request
+
+          exts = {".py", ".md", ".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".cfg", ".ini"}
+          skip_dirs = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".uv", "alembic"}
+          max_file_bytes = 20000
+
+          candidates = []
+          for path in pathlib.Path(".").rglob("*"):
+              if not path.is_file():
+                  continue
+              if any(part in skip_dirs for part in path.parts):
+                  continue
+              if path.suffix not in exts:
+                  continue
+              try:
+                  size = path.stat().st_size
+              except OSError:
+                  continue
+              if size == 0 or size > max_file_bytes:
+                  continue
+              candidates.append(path)
+
+          random.shuffle(candidates)
+          api_key = os.environ["OPENAI_API_KEY"]
+          model = os.environ["OPENAI_MODEL"]
+
+          system_prompt = (
+              "너는 코드베이스를 다듬는 어시스턴트다. 주어진 파일에서 동작을 절대 바꾸지 않는, "
+              "아주 사소하고 안전한 개선을 하나만 찾는다 (예: 주석/문서의 오탈자 수정, 어색한 문구 다듬기, "
+              "명백히 잘못된 주석 수정, 미사용 import 제거). 코드 로직, 변수명, 함수 시그니처, 값은 절대 바꾸지 않는다. "
+              "개선할 부분이 없으면 정확히 NONE 이라는 텍스트만 출력한다. "
+              "개선할 부분이 있으면 다른 설명 없이 JSON 객체 하나만 출력한다: "
+              '{"old": "파일 내용 중 정확히 일치하는 원본 텍스트 조각", "new": "교체할 텍스트"}. '
+              "old는 파일 내용에 정확히 한 번만 등장하는 짧은 조각이어야 한다."
+          )
+
+          def call_openai(path, text):
+              user_prompt = f"파일 경로: {path}\n\n파일 내용:\n{text}"
+              payload = {
+                  "model": model,
+                  "messages": [
+                      {"role": "system", "content": system_prompt},
+                      {"role": "user", "content": user_prompt},
+                  ],
+                  "temperature": 0.2,
+              }
+              req = urllib.request.Request(
+                  "https://api.openai.com/v1/chat/completions",
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers={
+                      "Authorization": f"Bearer {api_key}",
+                      "Content-Type": "application/json",
+                  },
+                  method="POST",
+              )
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  body = json.loads(resp.read().decode("utf-8"))
+              return body["choices"][0]["message"]["content"].strip()
+
+          applied = None
+          for path in candidates[:8]:
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              try:
+                  content = call_openai(path, text)
+              except Exception as exc:
+                  print(f"{path}: 요청 실패 ({exc})")
+                  continue
+
+              if content.startswith("```"):
+                  content = content.strip("`")
+                  if "\n" in content:
+                      content = content.split("\n", 1)[1]
+
+              if not content or content.strip() == "NONE":
+                  print(f"{path}: 개선 제안 없음")
+                  continue
+
+              try:
+                  change = json.loads(content)
+                  old, new = change["old"], change["new"]
+              except Exception:
+                  print(f"{path}: 응답 파싱 실패")
+                  continue
+
+              if not old or old == new or text.count(old) != 1:
+                  print(f"{path}: 적용 불가능한 제안")
+                  continue
+
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
+              applied = path
+              print(f"적용된 파일: {path}")
+              break
+
+          if not applied:
+              print("OpenAI 폴백에서도 개선 후보를 찾지 못했습니다. 이번 실행은 변경 없이 종료합니다.")
+          PY
+          fi
+
       - name: 하루에 한 가지 수정사항만 남도록 변경 범위 제한
         if: steps.date_check.outputs.in_range == 'true'
         id: narrow
