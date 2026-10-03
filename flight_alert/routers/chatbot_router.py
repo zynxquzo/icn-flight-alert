@@ -98,7 +98,6 @@ async def create_session(
             db, user_id=current_user.user_id, terminal=payload.terminal
         )
         await db.commit()
-        await db.refresh(session)
     except SQLAlchemyError:
         await db.rollback()
         logger.error("채팅 세션 생성 실패", exc_info=True)

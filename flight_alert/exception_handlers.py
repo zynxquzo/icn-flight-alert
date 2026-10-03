@@ -87,10 +87,9 @@ def register_exception_handlers(app):
         추가해야 브라우저 CORS 오류가 발생하지 않습니다.
         """
         logger.error("Unexpected error: %s", exc, exc_info=True)
-        # TEMP DEBUG: logging 경로가 비정상 동작하는 것으로 의심되어 stderr에 직접 기록
-        print(f"[DEBUG500] {request.method} {request.url.path}", file=sys.stderr, flush=True)
+        # logging 모듈 경로(uvicorn 프로덕션 환경)에서 누락되는 경우가 있어 stderr에도 직접 기록
+        print(f"[500] {request.method} {request.url.path}", file=sys.stderr, flush=True)
         traceback.print_exc(file=sys.stderr)
-        sys.stderr.flush()
         content: dict = {
             "success": False,
             "error": {
